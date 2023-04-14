@@ -1,5 +1,7 @@
 import ujson
 
+# "in" checks for <class 'dict'> is O(1)
+
 
 def process_timing_app_data(msg):
     # Seperate the timestamp from the JSON data
@@ -8,7 +10,6 @@ def process_timing_app_data(msg):
 
     # receivedData may contain information for more than 1 driver, where driver no. is the key
     for driver in receivedData:
-        # "in" checks for <class 'dict'> is O(1)
         if "Stints" in receivedData[driver]:
             for curStint in receivedData[driver]["Stints"]:
                 # Sometimes curStint is a list due to poor formatting in the livedata. We are only interested in curStint as the stint number of the car.
@@ -60,6 +61,37 @@ def process_timing_data(msg):
                     # speed = receivedData[driver]["Speeds"][indvSpeed]["Value"]
                     # broadcast
                     pass
+
+        if "InPit" in receivedData[driver]:
+            if receivedData[driver]["InPit"] == "true":
+                # Driver just entered pit
+                if "NumberOfPitStops" in receivedData[driver]:
+                    # broadcast
+                    pass
+            elif (receivedData[driver]["InPit"] == "false") and (
+                "PitOut" in receivedData[driver]
+            ):
+                # Driver just exited pit
+                pass
+            else:
+                # if InPit == false and PitOut is not present, driver left pit for first time
+                pass
+
+
+def process_lap_count(msg):
+    # Seperate the timestamp from the JSON data
+    timestamp = msg[:12]  # HH:MM:SS.MLS
+    receivedData = ujson.loads(msg[12:])
+
+    # broadcast receivedData["CurrentLap"]
+    if "TotalLaps" in receivedData:  # CurrentLap == 1
+        # broadcast receivedData["TotalLaps"]
+        # CurrentLap = 1 although session has not started yet
+        # Check SessionData.jsonStream for cue to start of session
+        pass
+    else:
+        # broadcast receivedData["CurrentLap"]
+        pass
 
 
 fileH = open("jsonStreams/TimingData.jsonStream", "r", encoding="utf-8-sig")
