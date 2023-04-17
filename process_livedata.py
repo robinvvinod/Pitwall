@@ -1,35 +1,103 @@
 import ujson
 import redis.asyncio as redis
+import asyncio
 
 
 class ProcessLiveData:
-    def __init__(self, connection_url="localhost"):
-        self._connection = redis.Redis(host=connection_url, encoding="utf8")
+    """
+    A client for processing live data captured by fastf1-livetiming.signalrc_client.py.
 
-    def process_timing_app_data(self, msg):
-        # Seperate the timestamp from the JSON data
-        timestamp = msg[:12]  # HH:MM:SS.MLS
+    Args:
+        connection_url (str) : url of the redis data structure server where data is cached
+        logger (Logger or None) : By default, errors are logged to the
+            console. If you wish to customize logging, you can pass an
+            instance of :class:`logging.Logger` (see: :mod:`logging`).
+    """
+
+    def __init__(self, connection_url="localhost"):
+        self._connection = redis.Redis(host=connection_url, decode_responses=True)
+
+    async def get_current_lap(self, driver):
+        """Get current lap any driver is on"""
+        curLap = await self._connection.hget(name=driver, key="CurrentLap")
+        if curLap is None:
+            curLap = 1
+        return curLap
+
+    async def process_timing_app_data(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../TimingAppData.jsonStream
+
+        The following information is present in the file:
+            (1) TotaLaps done on a certain tyre
+            (2) Stint Number
+            (3) LapTime of a given LapNumber
+            (4) Compound type of tyre changed in pitstop
+                (a) Age of tyres fitted in pitstop
+        """
+
         receivedData = ujson.loads(msg[12:])["Lines"]
+        tasks = []
 
         # receivedData may contain information for more than 1 driver, where driver no. is the key
         for driver in receivedData:
+            # Filter out noise. All important information is under key "Stints"
             if "Stints" in receivedData[driver]:
                 for curStint in receivedData[driver]["Stints"]:
-                    # Sometimes curStint is a list due to poor formatting in the livedata. We are only interested in curStint as the stint number of the car.
+                    # Sometimes curStint is a list due to poor formatting in the livedate.
                     if isinstance(curStint, str):
-                        if "TotalLaps" in receivedData[driver]["Stints"][curStint]:
-                            # broadcast totalLaps done in tyres of current stint (incl in other sessions)
-                            pass
+                        indvData = receivedData[driver]["Stints"][curStint]
 
-                        if "LapTime" in receivedData[driver]["Stints"][curStint]:
-                            # broadcast previous LapTime of (LapNumber - 1)th lap & LapNumber
-                            pass
+                        # TotalLaps is the number of laps driven on current set of tyres
+                        # Includes laps driven on other sessions
+                        if "TotalLaps" in indvData:
+                            curLap = await self.get_current_lap(driver)
+                            tasks.append(
+                                self._connection.hset(
+                                    name=f"{driver}:{curLap}",
+                                    mapping={
+                                        "TyreAge": indvData["TotalLaps"],
+                                        "StintNumber": curStint,
+                                    },
+                                )
+                            )
 
-                        if "Compound" in receivedData[driver]["Stints"][curStint]:
-                            # receivedData[driver]["Stints"][curStint]["Compound"] = SOFT/MEDIUM/HARD
-                            # receivedData[driver]["Stints"][curStint]["New"] = true/false
-                            # broadcast change in stintNumber as well
-                            pass
+                        if ("LapTime" in indvData) and ("LapNumber" in indvData):
+                            tasks.append(
+                                self._connection.hset(
+                                    name=f'{driver}:{indvData["LapNumber"]}',
+                                    key="LapTime",
+                                    value=f'{indvData["LapTime"]}',
+                                )
+                            )
+                            tasks.append(
+                                self._connection.hset(
+                                    name=driver,
+                                    key="CurrentLap",
+                                    value=int(indvData["LapNumber"]) + 1,
+                                )
+                            )
+
+                        if ("Compound" in indvData) and (
+                            indvData["Compound"] != "UNKNOWN"
+                        ):
+                            curLap = await self.get_current_lap(driver)
+                            mapping = {
+                                "TyreType": f'{indvData["Compound"]}',
+                                "StintNumber": curStint,
+                            }
+
+                            if "TotalLaps" in indvData:
+                                mapping["TyreAge"] = f'{indvData["TotalLaps"]}'
+
+                            tasks.append(
+                                self._connection.hset(
+                                    name=f"{driver}:{int(curLap) + 1}",
+                                    mapping=mapping,
+                                )
+                            )
+
+        await asyncio.gather(*tasks)
 
     def process_timing_data(self, msg):
         # Seperate the timestamp from the JSON data
@@ -96,6 +164,12 @@ class ProcessLiveData:
             pass
 
 
-# fileH = open("jsonStreams/TimingData.jsonStream", "r", encoding="utf-8-sig")
-# for line in fileH:
-#     process_timing_data(line)
+async def test():
+    Processor = ProcessLiveData()
+    fileH = open("jsonStreams/TimingAppData.jsonStream", "r", encoding="utf-8-sig")
+
+    for line in fileH:
+        await Processor.process_timing_app_data(line)
+
+
+asyncio.run(test())
