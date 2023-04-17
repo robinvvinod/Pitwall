@@ -5,13 +5,12 @@ Parts of the script have been modified to support live processing of the capture
 
 import asyncio
 import concurrent.futures
-import json
 import logging
 import requests
 import time
 
-from Pitwall.signalr_aio import Connection
-from Pitwall.livedata_stream import process_livedata
+from ..signalr_aio import Connection
+
 
 class SignalRClient:
     """A client for receiving and saving F1 timing data which is streamed
@@ -38,21 +37,34 @@ class SignalRClient:
             console. If you wish to customize logging, you can pass an
             instance of :class:`logging.Logger` (see: :mod:`logging`).
     """
-    _connection_url = 'https://livetiming.formula1.com/signalr'
 
-    def __init__(self, filename, filemode='w',
-                 timeout=60, logger=None):
+    _connection_url = "https://livetiming.formula1.com/signalr"
 
-        self.headers = {'User-agent': 'BestHTTP',
-                        'Accept-Encoding': 'gzip, identity',
-                        'Connection': 'keep-alive, Upgrade'}
+    def __init__(self, filename, filemode="w", timeout=60, logger=None):
+        self.headers = {
+            "User-agent": "BestHTTP",
+            "Accept-Encoding": "gzip, identity",
+            "Connection": "keep-alive, Upgrade",
+        }
 
-        self.topics = ["Heartbeat", "CarData.z", "Position.z",
-                       "ExtrapolatedClock", "TopThree", "RcmSeries",
-                       "TimingStats", "TimingAppData",
-                       "WeatherData", "TrackStatus", "DriverList",
-                       "RaceControlMessages", "SessionInfo",
-                       "SessionData", "LapCount", "TimingData"]
+        self.topics = [
+            "Heartbeat",
+            "CarData.z",
+            "Position.z",
+            "ExtrapolatedClock",
+            "TopThree",
+            "RcmSeries",
+            "TimingStats",
+            "TimingAppData",
+            "WeatherData",
+            "TrackStatus",
+            "DriverList",
+            "RaceControlMessages",
+            "SessionInfo",
+            "SessionData",
+            "LapCount",
+            "TimingData",
+        ]
 
         self.filename = filename
         self.filemode = filemode
@@ -60,10 +72,8 @@ class SignalRClient:
         self._connection = None
 
         if not logger:
-            logging.basicConfig(
-                format="%(asctime)s - %(levelname)s: %(message)s"
-            )
-            self.logger = logging.getLogger('SignalR')
+            logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s")
+            self.logger = logging.getLogger("SignalR")
         else:
             self.logger = logger
 
@@ -71,20 +81,19 @@ class SignalRClient:
         self._t_last_message = None
 
     def _to_file(self, msg):
-        #self._output_file.write(msg + '\n')
-        #self._output_file.flush()
-        
+        # self._output_file.write(msg + '\n')
+        # self._output_file.flush()
+
         # Check if the msg is in utf-8-sig and account for the BOM accordingly
-        process_livedata(msg)
+        # process_livedata(msg)
+        pass
 
     async def _on_message(self, msg):
         self._t_last_message = time.time()
         loop = asyncio.get_running_loop()
         try:
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                await loop.run_in_executor(
-                    pool, self._to_file, str(msg)
-                )
+                await loop.run_in_executor(pool, self._to_file, str(msg))
         except Exception:
             self.logger.exception("Exception while writing message to file")
 
@@ -96,10 +105,10 @@ class SignalRClient:
         self._connection = Connection(self._connection_url, session=session)
 
         # Register hub
-        hub = self._connection.register_hub('Streaming')
+        hub = self._connection.register_hub("Streaming")
 
         # Assign hub message handler
-        hub.client.on('feed', self._on_message)
+        hub.client.on("feed", self._on_message)
 
         hub.server.invoke("Subscribe", self.topics)
 
@@ -111,18 +120,21 @@ class SignalRClient:
     async def _supervise(self):
         self._t_last_message = time.time()
         while True:
-            if (self.timeout != 0
-                    and time.time() - self._t_last_message > self.timeout):
-                self.logger.warning(f"Timeout - received no data for more "
-                                    f"than {self.timeout} seconds!")
+            if self.timeout != 0 and time.time() - self._t_last_message > self.timeout:
+                self.logger.warning(
+                    f"Timeout - received no data for more "
+                    f"than {self.timeout} seconds!"
+                )
                 self._connection.close()
                 return
             await asyncio.sleep(1)
 
     async def _async_start(self):
         self.logger.info(f"Starting FastF1 live timing client")
-        await asyncio.gather(asyncio.ensure_future(self._supervise()),
-                             asyncio.ensure_future(self._run()))
+        await asyncio.gather(
+            asyncio.ensure_future(self._supervise()),
+            asyncio.ensure_future(self._run()),
+        )
         self._output_file.close()
         self.logger.warning("Exiting...")
 
@@ -133,4 +145,3 @@ class SignalRClient:
         except KeyboardInterrupt:
             self.logger.warning("Keyboard interrupt - exiting...")
             return
-
