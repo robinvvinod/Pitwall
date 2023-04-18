@@ -44,7 +44,7 @@ class ProcessLiveData:
             # Filter out noise. All important information is under key "Stints"
             if "Stints" in receivedData[driver]:
                 for curStint in receivedData[driver]["Stints"]:
-                    # Sometimes curStint is a list due to poor formatting in the livedate.
+                    # Sometimes curStint is a list due to poor formatting in the livedata.
                     if isinstance(curStint, str):
                         indvData = receivedData[driver]["Stints"][curStint]
 
@@ -99,10 +99,11 @@ class ProcessLiveData:
 
         await asyncio.gather(*tasks)
 
-    def process_timing_data(self, msg):
+    async def process_timing_data(self, msg):
         # Seperate the timestamp from the JSON data
         timestamp = msg[:12]  # HH:MM:SS.MLS
         receivedData = ujson.loads(msg[12:])["Lines"]
+        tasks = []
 
         # receivedData may contain information for more than 1 driver, where driver no. is the key
         for driver in receivedData:
@@ -116,37 +117,94 @@ class ProcessLiveData:
 
             if "Sectors" in receivedData[driver]:
                 for indvSector in receivedData[driver]["Sectors"]:
-                    # Sometimes indvSector is a list due to poor formatting in the livedate.
+                    # Sometimes indvSector is a list due to poor formatting in the livedata.
                     if isinstance(indvSector, str):
-                        # Sector number = indvSector
                         if "Value" in receivedData[driver]["Sectors"][indvSector]:
-                            # sectorTime = receivedData[driver]["Sectors"][indvSector]["Value"]
-                            # broadcast
-                            pass
+                            curLap = await self.get_current_lap(driver)
+                            sectorNumber = int(indvSector) + 1
+                            sectorTime = receivedData[driver]["Sectors"][indvSector][
+                                "Value"
+                            ]
+
+                            # Sometimes "Value" is empty due to poor formatting in the livedata
+                            if sectorTime != "":
+                                tasks.append(
+                                    self._connection.hset(
+                                        name=f"{driver}:{curLap}",
+                                        key=f"Sector{sectorNumber}Time",
+                                        value=sectorTime,
+                                    )
+                                )
+
+                            # TODO: Process personal/overall fastest sectors
 
             if "Speeds" in receivedData[driver]:
                 for indvSpeed in receivedData[driver]["Speeds"]:
                     # Sometimes indvSpeed is a list due to poor formatting in the livedata.
                     if isinstance(indvSpeed, str):
-                        # whichSector = int(indvSpeed) + 1
-                        # speed = receivedData[driver]["Speeds"][indvSpeed]["Value"]
-                        # broadcast
-                        pass
+                        speedTrap = receivedData[driver]["Speeds"]
+                        curLap = await self.get_current_lap(driver)
+
+                        try:
+                            if "I1" in speedTrap:
+                                mapping = {"Sector1SpeedTrap": speedTrap["I1"]["Value"]}
+                            elif "I2" in speedTrap:
+                                mapping = {"Sector2SpeedTrap": speedTrap["I2"]["Value"]}
+                            elif "FL" in speedTrap:
+                                mapping = {
+                                    "FinishLineSpeedTrap": speedTrap["FL"]["Value"]
+                                }
+                            elif "ST" in speedTrap:
+                                mapping = {
+                                    "BackStraightSpeedTrap": speedTrap["ST"]["Value"]
+                                }
+
+                            tasks.append(
+                                self._connection.hset(
+                                    name=f"{driver}:{curLap}",
+                                    mapping=mapping,
+                                )
+                            )
+                        except:
+                            pass
+
+                        # TODO: Process personal/fastest speeds on speed traps
 
             if "InPit" in receivedData[driver]:
-                if receivedData[driver]["InPit"] == "true":
+                if (receivedData[driver]["InPit"] == "true") and (
+                    "NumberOfPitStops" in receivedData[driver]
+                ):
                     # Driver just entered pit
-                    if "NumberOfPitStops" in receivedData[driver]:
-                        # broadcast
-                        pass
+                    curLap = await self.get_current_lap(driver)
+                    tasks.append(
+                        self._connection.hset(
+                            name=driver,
+                            key="NumberOfPitStops",
+                            value=receivedData[driver]["NumberOfPitStops"],
+                        )
+                    )
+
+                    tasks.append(
+                        self._connection.hset(
+                            name=f"{driver}:{curLap}", key="PitIn", value=True
+                        )
+                    )
                 elif (receivedData[driver]["InPit"] == "false") and (
                     "PitOut" in receivedData[driver]
                 ):
                     # Driver just exited pit
-                    pass
+                    curLap = await self.get_current_lap(driver)
+                    tasks.append(
+                        self._connection.hset(
+                            name=f"{driver}:{curLap}", key="PitOut", value=True
+                        )
+                    )
+
                 else:
                     # if InPit == false and PitOut is not present, driver left pit for first time
                     pass
+
+        await asyncio.gather(*tasks)
 
     def process_lap_count(self, msg):
         # Seperate the timestamp from the JSON data
@@ -170,6 +228,8 @@ async def test():
 
     for line in fileH:
         await Processor.process_timing_app_data(line)
+
+    fileH.close()
 
 
 asyncio.run(test())
