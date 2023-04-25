@@ -9,7 +9,8 @@ import logging
 import requests
 import time
 
-from ..signalr_aio import Connection
+from livetiming_server.signalr_aio import Connection
+from livetiming_server.process_livedata import ProcessLiveData
 
 
 class SignalRClient:
@@ -40,7 +41,7 @@ class SignalRClient:
 
     _connection_url = "https://livetiming.formula1.com/signalr"
 
-    def __init__(self, filename, filemode="w", timeout=60, logger=None):
+    def __init__(self, timeout=60, logger=None):
         self.headers = {
             "User-agent": "BestHTTP",
             "Accept-Encoding": "gzip, identity",
@@ -66,8 +67,6 @@ class SignalRClient:
             "TimingData",
         ]
 
-        self.filename = filename
-        self.filemode = filemode
         self.timeout = timeout
         self._connection = None
 
@@ -77,28 +76,28 @@ class SignalRClient:
         else:
             self.logger = logger
 
-        self._output_file = None
-        self._t_last_message = None
+        self._tsince_last_message = None
+        self._data_processor = ProcessLiveData()
 
-    def _to_file(self, msg):
+    async def _process_msg(self, msg):
         # self._output_file.write(msg + '\n')
         # self._output_file.flush()
 
         # Check if the msg is in utf-8-sig and account for the BOM accordingly
-        # process_livedata(msg)
+        # print(msg)
+        # self._data_processor.process(msg, topic)
         pass
 
     async def _on_message(self, msg):
-        self._t_last_message = time.time()
+        self._tsince_last_message = time.time()
         loop = asyncio.get_running_loop()
         try:
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                await loop.run_in_executor(pool, self._to_file, str(msg))
+                await loop.run_in_executor(pool, self._process_msg, str(msg))
         except Exception:
-            self.logger.exception("Exception while writing message to file")
+            self.logger.exception("Exception while processing live data")
 
     async def _run(self):
-        self._output_file = open(self.filename, self.filemode)
         # Create connection
         session = requests.Session()
         session.headers = self.headers
@@ -106,10 +105,8 @@ class SignalRClient:
 
         # Register hub
         hub = self._connection.register_hub("Streaming")
-
         # Assign hub message handler
         hub.client.on("feed", self._on_message)
-
         hub.server.invoke("Subscribe", self.topics)
 
         # Start the client
@@ -118,9 +115,12 @@ class SignalRClient:
             await loop.run_in_executor(pool, self._connection.start)
 
     async def _supervise(self):
-        self._t_last_message = time.time()
+        self._tsince_last_message = time.time()
         while True:
-            if self.timeout != 0 and time.time() - self._t_last_message > self.timeout:
+            if (
+                self.timeout != 0
+                and time.time() - self._tsince_last_message > self.timeout
+            ):
                 self.logger.warning(
                     f"Timeout - received no data for more "
                     f"than {self.timeout} seconds!"
@@ -129,19 +129,10 @@ class SignalRClient:
                 return
             await asyncio.sleep(1)
 
-    async def _async_start(self):
+    async def start(self):
         self.logger.info(f"Starting FastF1 live timing client")
         await asyncio.gather(
             asyncio.ensure_future(self._supervise()),
             asyncio.ensure_future(self._run()),
         )
-        self._output_file.close()
         self.logger.warning("Exiting...")
-
-    def start(self):
-        """Connect to the data stream and start writing the data to a file."""
-        try:
-            asyncio.run(self._async_start())
-        except KeyboardInterrupt:
-            self.logger.warning("Keyboard interrupt - exiting...")
-            return
