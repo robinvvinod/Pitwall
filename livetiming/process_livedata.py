@@ -9,7 +9,8 @@ class ProcessLiveData:
     A client for processing live data captured by fastf1-livetiming.signalrc_client.py.
 
     Args:
-        connection_url (str) : url of the redis data structure server where data is cached
+        redis_url (str) : url of the redis data structure server where data is cached
+        kafka_url (str) : url of the kafka server
         logger (Logger or None) : By default, errors are logged to the
             console. If you wish to customize logging, you can pass an
             instance of :class:`logging.Logger` (see: :mod:`logging`).
@@ -263,6 +264,9 @@ class ProcessLiveData:
     async def start_kafka_producer(self):
         await self._kafka.start()
 
+    async def stop_kafka_producer(self):
+        await self._kafka.stop()
+
     async def process(self, msg, topic):
         # if topic == "TimingAppData":
         #    _process_timing_app_data(msg)
@@ -278,7 +282,7 @@ async def test():
         await Processor._process_timing_app_data(line)
 
     fileH.close()
-    await Processor._kafka.stop()
+    await Processor.stop_kafka_producer()
 
 
 asyncio.run(test())

@@ -10,7 +10,6 @@ import requests
 import time
 
 from livetiming_server.signalr_aio import Connection
-from livetiming_server.process_livedata import ProcessLiveData
 
 
 class SignalRClient:
@@ -27,10 +26,9 @@ class SignalRClient:
     :mod:`fastf1.core`
 
     Args:
-        filename (str) : filename (opt. with path) for the output file
-        filemode (str, optional) : one of 'w' or 'a'; append to or overwrite
-            file content it the file already exists. Append-mode may be useful
-            if the client is restarted during a session.
+        topics (list[str]) : List of topics to subscribe to in SignalR broadcast
+        processor (livetiming.process_livedata.ProcessLiveData) : Instance of ProcessLiveData class to
+            be called on receiving message
         timeout (int, optional) : Number of seconds after which the client
             will automatically exit when no message data is received.
             Set to zero to disable.
@@ -41,32 +39,15 @@ class SignalRClient:
 
     _connection_url = "https://livetiming.formula1.com/signalr"
 
-    def __init__(self, timeout=60, logger=None):
+    def __init__(self, topics, processor, timeout=60, logger=None):
         self.headers = {
             "User-agent": "BestHTTP",
             "Accept-Encoding": "gzip, identity",
             "Connection": "keep-alive, Upgrade",
         }
 
-        self.topics = [
-            "Heartbeat",
-            "CarData.z",
-            "Position.z",
-            "ExtrapolatedClock",
-            "TopThree",
-            "RcmSeries",
-            "TimingStats",
-            "TimingAppData",
-            "WeatherData",
-            "TrackStatus",
-            "DriverList",
-            "RaceControlMessages",
-            "SessionInfo",
-            "SessionData",
-            "LapCount",
-            "TimingData",
-        ]
-
+        self.topics = topics
+        self._processor = processor
         self.timeout = timeout
         self._connection = None
 
@@ -77,7 +58,6 @@ class SignalRClient:
             self.logger = logger
 
         self._tsince_last_message = None
-        self._data_processor = ProcessLiveData()
 
     async def _process_msg(self, msg):
         # self._output_file.write(msg + '\n')
@@ -85,7 +65,7 @@ class SignalRClient:
 
         # Check if the msg is in utf-8-sig and account for the BOM accordingly
         # print(msg)
-        # self._data_processor.process(msg, topic)
+        # self._processor.process(msg, topic)
         pass
 
     async def _on_message(self, msg):
@@ -98,6 +78,9 @@ class SignalRClient:
             self.logger.exception("Exception while processing live data")
 
     async def _run(self):
+        # Start kafka producer
+        await self._processor.start_kafka_producer()
+
         # Create connection
         session = requests.Session()
         session.headers = self.headers
@@ -126,6 +109,7 @@ class SignalRClient:
                     f"than {self.timeout} seconds!"
                 )
                 self._connection.close()
+                self._processor.stop_kafka_producer()
                 return
             await asyncio.sleep(1)
 
