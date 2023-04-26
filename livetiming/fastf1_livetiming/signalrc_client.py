@@ -9,7 +9,7 @@ import logging
 import requests
 import time
 
-from livetiming_server.signalr_aio import Connection
+from livetiming.signalr_aio import Connection
 
 
 class SignalRClient:
