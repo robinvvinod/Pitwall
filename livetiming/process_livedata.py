@@ -20,6 +20,14 @@ class ProcessLiveData:
         self._redis = redis.Redis(host=redis_url, decode_responses=True)
         self._kafka = aiokafka.AIOKafkaProducer(bootstrap_servers=kafka_url)
 
+        self.sessionStatus = None
+
+    async def start_kafka_producer(self):
+        await self._kafka.start()
+
+    async def stop_kafka_producer(self):
+        await self._kafka.stop()
+
     async def _get_current_lap(self, driver):
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
@@ -249,23 +257,52 @@ class ProcessLiveData:
             # Check SessionData.jsonStream for cue to start of session
             tasks.append(
                 self._redis.hset(
-                    name="race", key="TotalLaps", value=receivedData["TotalLaps"]
+                    name="Session", key="TotalLaps", value=receivedData["TotalLaps"]
                 )
             )
 
         tasks.append(
             self._redis.hset(
-                name="race", key="CurrentLap", value=receivedData["CurrentLap"]
+                name="Session", key="CurrentLap", value=receivedData["CurrentLap"]
             )
         )
 
         asyncio.gather(*tasks)
 
-    async def start_kafka_producer(self):
-        await self._kafka.start()
+    async def _process_session_data(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../SessionData.jsonStream
 
-    async def stop_kafka_producer(self):
-        await self._kafka.stop()
+        The following information is present in the file:
+            (1) Session start time
+            (2) Session end time
+        """
+
+        # Seperate the timestamp from the JSON data
+        timestamp = msg[:12]  # HH:MM:SS.MLS
+        receivedData = ujson.loads(msg[12:])
+        tasks = []
+
+        if self._get_session_status(receivedData) == "Started":
+            self.sessionStatus = "Started"
+            tasks.append(
+                self._redis.hset(name="Session", key="StartTime", value=timestamp)
+            )
+        elif self._get_session_status(receivedData) == "Finished":
+            self.sessionStatus = "Finished"
+            tasks.append(
+                self._redis.hset(name="Session", key="EndTime", value=timestamp)
+            )
+
+        asyncio.gather(*tasks)
+
+    def _get_session_status(self, d):
+        """Find SessionStatus key inside a nested dictionary"""
+        for key, value in d.items():
+            if key == "SessionStatus":
+                return value
+            if isinstance(value, dict):
+                return self._get_session_status(value)
 
     async def process(self, msg, topic):
         # if topic == "TimingAppData":
@@ -275,14 +312,14 @@ class ProcessLiveData:
 
 async def test():
     Processor = ProcessLiveData()
-    await Processor.start_kafka_producer()
-    fileH = open("jsonStreams/TimingAppData.jsonStream", "r", encoding="utf-8-sig")
+    # await Processor.start_kafka_producer()
+    fileH = open("jsonStreams/SessionData.jsonStream", "r", encoding="utf-8-sig")
 
     for line in fileH:
-        await Processor._process_timing_app_data(line)
+        await Processor._process_session_data(line)
 
     fileH.close()
-    await Processor.stop_kafka_producer()
+    # await Processor.stop_kafka_producer()
 
 
 asyncio.run(test())

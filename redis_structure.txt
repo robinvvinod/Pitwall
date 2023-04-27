@@ -1,0 +1,30 @@
+
+hash {
+  key: value
+}
+
+
+CarNumber:LapNumber {
+    StintNumber : Int
+    TyreAge : Int
+    TyreType : Str
+    LapTime : Str
+    Sector[1/2/3]Time : Str
+    PitIn : Bool + Timestamp
+    PitOut : Bool + Timestamp
+    Sector[1/2]SpeedTrap : Float
+    FinishLineSpeedTrap : Float
+    BackStraightSpeedTrap : Float
+}
+
+CarNumber {
+    CurrentLap : Int
+    NumberOfPitstops : Int
+}
+
+Session {
+    CurrentLap : Int
+    TotalLaps : Int
+    StartTime : Timestamp
+    EndTime : Timestamp
+}
