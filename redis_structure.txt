@@ -28,3 +28,12 @@ Session {
     StartTime : Timestamp
     EndTime : Timestamp
 }
+
+# lap attribute is kept to the last since it is optional
+RaceControlMessages {
+    MessageNum : Str (Other,Utc,Message,Lap)
+    MessageNum : Str (Drs,Utc,Status,Lap)
+    MessageNum : Str (SafetyCar,Utc,Mode,Status,Message,Lap)
+    MessageNum : Str (CarEvent,Utc,RacingNumber,Message,Lap)
+    MessageNum : Str (Flag,Utc,FlagType,Scope,Message,Lap)
+}

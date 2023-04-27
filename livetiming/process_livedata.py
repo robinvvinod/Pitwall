@@ -304,6 +304,79 @@ class ProcessLiveData:
             if isinstance(value, dict):
                 return self._get_session_status(value)
 
+    async def _process_race_control_messages(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../RaceControlMessages.jsonStream
+
+        The following information is present in the file:
+            (1) All messages from Race Control (RCM)
+                (a) Categories: "Other", "Drs", "Flag", "CarEvent", "SafetyCar"
+        """
+
+        # Seperate the timestamp from the JSON data
+        timestamp = msg[:12]  # HH:MM:SS.MLS
+        receivedData = ujson.loads(msg[12:])["Messages"]
+        tasks = []
+
+        # The first message sent might be a list sometimes, we can ignore that
+        if isinstance(receivedData, dict):
+            for messageNum in receivedData:
+                data = receivedData[messageNum]
+                utc = data["Utc"]
+
+                # Practice and Quali RCMs are not associated with a particular laps
+                if "Lap" in data:
+                    res = "," + str(data["Lap"])
+                else:
+                    res = ""
+
+                if data["Category"] == "Other":
+                    tasks.append(
+                        self._redis.hset(
+                            name="RaceControlMessages",
+                            key=messageNum,
+                            value=f'Other,{utc},{data["Message"]}{res}',
+                        )
+                    )
+
+                elif data["Category"] == "Drs":
+                    tasks.append(
+                        self._redis.hset(
+                            name="RaceControlMessages",
+                            key=messageNum,
+                            value=f'Drs,{utc},{data["Status"]}{res}',
+                        )
+                    )
+
+                elif data["Category"] == "Flag":
+                    tasks.append(
+                        self._redis.hset(
+                            name="RaceControlMessages",
+                            key=messageNum,
+                            value=f'Flag,{utc},{data["Flag"]},{data["Scope"]},{data["Message"]}{res}',
+                        )
+                    )
+
+                elif data["Category"] == "SafetyCar":
+                    tasks.append(
+                        self._redis.hset(
+                            name="RaceControlMessages",
+                            key=messageNum,
+                            value=f'SafetyCar,{utc},{data["Mode"]},{data["Status"]},{data["Message"]}{res}',
+                        )
+                    )
+
+                elif data["Category"] == "CarEvent":
+                    tasks.append(
+                        self._redis.hset(
+                            name="RaceControlMessages",
+                            key=messageNum,
+                            value=f'CarEvent,{utc},{data["RacingNumber"]},{data["Message"]}{res}',
+                        )
+                    )
+
+        asyncio.gather(*tasks)
+
     async def process(self, msg, topic):
         # if topic == "TimingAppData":
         #    _process_timing_app_data(msg)
@@ -313,10 +386,12 @@ class ProcessLiveData:
 async def test():
     Processor = ProcessLiveData()
     # await Processor.start_kafka_producer()
-    fileH = open("jsonStreams/SessionData.jsonStream", "r", encoding="utf-8-sig")
+    fileH = open(
+        "jsonStreams/RaceControlMessages.jsonStream", "r", encoding="utf-8-sig"
+    )
 
     for line in fileH:
-        await Processor._process_session_data(line)
+        await Processor._process_race_control_messages(line)
 
     fileH.close()
     # await Processor.stop_kafka_producer()
