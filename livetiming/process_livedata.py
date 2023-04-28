@@ -1,4 +1,3 @@
-import ujson
 import redis.asyncio as redis
 import aiokafka
 import asyncio
@@ -35,7 +34,7 @@ class ProcessLiveData:
             curLap = "1"
         return curLap
 
-    async def _process_timing_app_data(self, msg):
+    async def _process_timing_app_data(self, msg, timestamp):
         """
         Processes data from https://livetiming.formula1.com/static/.../TimingAppData.jsonStream
 
@@ -47,24 +46,22 @@ class ProcessLiveData:
                 (a) Age of tyres fitted in pitstop
         """
 
-        receivedData = ujson.loads(msg[12:])["Lines"]
+        msg = msg["Lines"]
         tasks = []
 
-        # receivedData may contain information for more than 1 driver, where driver no. is the key
-        for driver in receivedData:
+        # msg may contain information for more than 1 driver, where driver no. is the key
+        for driver in msg:
             # Filter out noise. All important information is under key "Stints"
-            if "Stints" in receivedData[driver]:
+            if "Stints" in msg[driver]:
                 # During a race, the first message sent has no Stint number as the race hasn't started yet
                 # The first message is a dict wrapped in a list to indicate the starting tyres
-                if isinstance(receivedData[driver]["Stints"], list):
+                if isinstance(msg[driver]["Stints"], list):
                     curStint = "0"
-                    indvData = receivedData[driver]["Stints"][0]
+                    indvData = msg[driver]["Stints"][0]
                 else:
-                    # receivedData[driver]["Stints"] is a dict containing only 1 key
-                    curStint = next(
-                        iter(receivedData[driver]["Stints"])
-                    )  # Find key in O(1)
-                    indvData = receivedData[driver]["Stints"][curStint]
+                    # msg[driver]["Stints"] is a dict containing only 1 key
+                    curStint = next(iter(msg[driver]["Stints"]))  # Find key in O(1)
+                    indvData = msg[driver]["Stints"][curStint]
 
                 # TotalLaps is the number of laps driven on current set of tyres
                 # Includes laps driven on other sessions
@@ -154,7 +151,7 @@ class ProcessLiveData:
 
         await asyncio.gather(*tasks)
 
-    async def _process_timing_data(self, msg):
+    async def _process_timing_data(self, msg, timestamp):
         """
         Processes data from https://livetiming.formula1.com/static/.../TimingData.jsonStream
 
@@ -166,31 +163,27 @@ class ProcessLiveData:
             (5) Pit stop entry and exit
         """
 
-        # Seperate the timestamp from the JSON data
-        timestamp = msg[:12]  # HH:MM:SS.MLS
-        receivedData = ujson.loads(msg[12:])["Lines"]
+        msg = msg["Lines"]
         tasks = []
 
-        # receivedData may contain information for more than 1 driver, where driver no. is the key
-        for driver in receivedData:
-            if "GapToLeader" in receivedData[driver]:
+        # msg may contain information for more than 1 driver, where driver no. is the key
+        for driver in msg:
+            if "GapToLeader" in msg[driver]:
                 # TODO: Calculate gap to leader at the end of a lap
                 pass
 
-            if "IntervalToPositionAhead" in receivedData[driver]:
+            if "IntervalToPositionAhead" in msg[driver]:
                 # broadcast gap to position ahead
                 pass
 
-            if ("Sectors" in receivedData[driver]) and (
-                isinstance(receivedData[driver]["Sectors"], dict)
+            if ("Sectors" in msg[driver]) and (
+                isinstance(msg[driver]["Sectors"], dict)
             ):
-                for indvSector in receivedData[driver]["Sectors"]:
-                    if "Value" in receivedData[driver]["Sectors"][indvSector]:
+                for indvSector in msg[driver]["Sectors"]:
+                    if "Value" in msg[driver]["Sectors"][indvSector]:
                         curLap = await self._get_current_lap(driver)
                         sectorNumber = int(indvSector) + 1
-                        sectorTime = receivedData[driver]["Sectors"][indvSector][
-                            "Value"
-                        ]
+                        sectorTime = msg[driver]["Sectors"][indvSector]["Value"]
 
                         # Sometimes "Value" is empty due to poor formatting in the livedata
                         if sectorTime != "":
@@ -205,9 +198,9 @@ class ProcessLiveData:
                         # TODO: Process personal/overall fastest sectors
                         # TODO: Handle contingency if sector 3 time arrives after new lap signal
 
-            if "Speeds" in receivedData[driver]:
-                for indvSpeed in receivedData[driver]["Speeds"]:
-                    speedTrap = receivedData[driver]["Speeds"][indvSpeed]
+            if "Speeds" in msg[driver]:
+                for indvSpeed in msg[driver]["Speeds"]:
+                    speedTrap = msg[driver]["Speeds"][indvSpeed]
                     curLap = await self._get_current_lap(driver)
 
                     if ("Value" in speedTrap) and (speedTrap["Value"] != ""):
@@ -229,9 +222,9 @@ class ProcessLiveData:
 
                     # TODO: Process personal/fastest speeds on speed traps
 
-            if "InPit" in receivedData[driver]:
-                if (receivedData[driver]["InPit"] == "true") and (
-                    "NumberOfPitStops" in receivedData[driver]
+            if "InPit" in msg[driver]:
+                if (msg[driver]["InPit"] == "true") and (
+                    "NumberOfPitStops" in msg[driver]
                 ):
                     # Driver just entered pit
                     curLap = await self._get_current_lap(driver)
@@ -239,7 +232,7 @@ class ProcessLiveData:
                         self._redis.hset(
                             name=driver,
                             key="NumberOfPitStops",
-                            value=receivedData[driver]["NumberOfPitStops"],
+                            value=msg[driver]["NumberOfPitStops"],
                         )
                     )
 
@@ -248,9 +241,7 @@ class ProcessLiveData:
                             name=f"{driver}:{curLap}", key="PitIn", value=True
                         )
                     )
-                elif (receivedData[driver]["InPit"] == "false") and (
-                    "PitOut" in receivedData[driver]
-                ):
+                elif (msg[driver]["InPit"] == "false") and ("PitOut" in msg[driver]):
                     # Driver just exited pit
                     curLap = await self._get_current_lap(driver)
                     tasks.append(
@@ -267,7 +258,7 @@ class ProcessLiveData:
 
         await asyncio.gather(*tasks)
 
-    async def _process_lap_count(self, msg):
+    async def _process_lap_count(self, msg, timestamp):
         """
         Processes data from https://livetiming.formula1.com/static/.../LapCount.jsonStream
 
@@ -276,29 +267,24 @@ class ProcessLiveData:
             (2) Total laps in race
         """
 
-        # Seperate the timestamp from the JSON data
-        timestamp = msg[:12]  # HH:MM:SS.MLS
-        receivedData = ujson.loads(msg[12:])
         tasks = []
 
-        if "TotalLaps" in receivedData:  # CurrentLap == 1
+        if "TotalLaps" in msg:  # CurrentLap == 1
             # CurrentLap may be = 1 although session has not started yet
             # Check SessionData.jsonStream for cue to start of session
             tasks.append(
                 self._redis.hset(
-                    name="Session", key="TotalLaps", value=receivedData["TotalLaps"]
+                    name="Session", key="TotalLaps", value=msg["TotalLaps"]
                 )
             )
 
         tasks.append(
-            self._redis.hset(
-                name="Session", key="CurrentLap", value=receivedData["CurrentLap"]
-            )
+            self._redis.hset(name="Session", key="CurrentLap", value=msg["CurrentLap"])
         )
 
         await asyncio.gather(*tasks)
 
-    async def _process_session_data(self, msg):
+    async def _process_session_data(self, msg, timestamp):
         """
         Processes data from https://livetiming.formula1.com/static/.../SessionData.jsonStream
 
@@ -307,17 +293,14 @@ class ProcessLiveData:
             (2) Session end time
         """
 
-        # Seperate the timestamp from the JSON data
-        timestamp = msg[:12]  # HH:MM:SS.MLS
-        receivedData = ujson.loads(msg[12:])
         tasks = []
 
-        if self._get_session_status(receivedData) == "Started":
+        if self._get_session_status(msg) == "Started":
             self.sessionStatus = "Started"
             tasks.append(
                 self._redis.hset(name="Session", key="StartTime", value=timestamp)
             )
-        elif self._get_session_status(receivedData) == "Finished":
+        elif self._get_session_status(msg) == "Finished":
             self.sessionStatus = "Finished"
             tasks.append(
                 self._redis.hset(name="Session", key="EndTime", value=timestamp)
@@ -333,7 +316,7 @@ class ProcessLiveData:
             if isinstance(value, dict):
                 return self._get_session_status(value)
 
-    async def _process_race_control_messages(self, msg):
+    async def _process_race_control_messages(self, msg, timestamp):
         """
         Processes data from https://livetiming.formula1.com/static/.../RaceControlMessages.jsonStream
 
@@ -342,15 +325,13 @@ class ProcessLiveData:
                 (a) Categories: "Other", "Drs", "Flag", "CarEvent", "SafetyCar"
         """
 
-        # Seperate the timestamp from the JSON data
-        timestamp = msg[:12]  # HH:MM:SS.MLS
-        receivedData = ujson.loads(msg[12:])["Messages"]
+        msg = msg["Messages"]
         tasks = []
 
         # The first message sent might be a list sometimes, we can ignore that
-        if isinstance(receivedData, dict):
-            for messageNum in receivedData:
-                data = receivedData[messageNum]
+        if isinstance(msg, dict):
+            for messageNum in msg:
+                data = msg[messageNum]
                 utc = data["Utc"]
 
                 # Practice and Quali RCMs are not associated with a particular laps
@@ -406,22 +387,14 @@ class ProcessLiveData:
 
         await asyncio.gather(*tasks)
 
-    async def process(self, msg, topic):
-        # if topic == "TimingAppData":
-        #    _process_timing_app_data(msg)
-        pass
-
-
-async def test():
-    Processor = ProcessLiveData()
-    await Processor.start_kafka_producer()
-    fileH = open("jsonStreams/TimingData.jsonStream", "r", encoding="utf-8-sig")
-
-    for line in fileH:
-        await Processor._process_timing_data(line)
-
-    fileH.close()
-    await Processor.stop_kafka_producer()
-
-
-asyncio.run(test())
+    async def process(self, topic, msg, timestamp):
+        if topic == "TimingAppData":
+            await self._process_timing_app_data(msg, timestamp)
+        elif topic == "TimingData":
+            await self._process_timing_data(msg, timestamp)
+        elif topic == "LapCount":
+            await self._process_lap_count(msg, timestamp)
+        elif topic == "RaceControlMessages":
+            await self._process_race_control_messages(msg, timestamp)
+        elif topic == "SessionData":
+            await self._process_session_data(msg, timestamp)

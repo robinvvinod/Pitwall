@@ -59,22 +59,11 @@ class SignalRClient:
 
         self._tsince_last_message = None
 
-    async def _process_msg(self, msg):
-        # self._output_file.write(msg + '\n')
-        # self._output_file.flush()
-
-        # Check if the msg is in utf-8-sig and account for the BOM accordingly
-        # print(msg)
-        # self._processor.process(msg, topic)
-        pass
-
     async def _on_message(self, msg):
         self._tsince_last_message = time.time()
-        loop = asyncio.get_running_loop()
         try:
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                await loop.run_in_executor(pool, self._process_msg, str(msg))
-        except Exception:
+            await self._processor.process(topic=msg[0], msg=msg[1], timestamp=[msg[2]])
+        except:
             self.logger.exception("Exception while processing live data")
 
     async def _run(self):

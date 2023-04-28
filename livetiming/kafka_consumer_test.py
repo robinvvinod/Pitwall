@@ -6,6 +6,8 @@ async def consume():
     consumer = AIOKafkaConsumer(
         "Tyre",
         "LapTime",
+        "TyreAge",
+        "CurrentLap",
         bootstrap_servers="localhost:9092",
         group_id="my-group",
     )
