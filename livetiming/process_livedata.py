@@ -28,11 +28,11 @@ class ProcessLiveData:
     async def stop_kafka_producer(self):
         await self._kafka.stop()
 
-    async def _get_current_lap(self, driver):
+    async def _get_current_lap(self, driver) -> str:
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
         if curLap is None:
-            curLap = 1
+            curLap = "1"
         return curLap
 
     async def _process_timing_app_data(self, msg):
@@ -54,65 +54,103 @@ class ProcessLiveData:
         for driver in receivedData:
             # Filter out noise. All important information is under key "Stints"
             if "Stints" in receivedData[driver]:
-                for curStint in receivedData[driver]["Stints"]:
-                    # Sometimes curStint is a list due to poor formatting in the livedata.
-                    if isinstance(curStint, str):
-                        indvData = receivedData[driver]["Stints"][curStint]
+                # During a race, the first message sent has no Stint number as the race hasn't started yet
+                # The first message is a dict wrapped in a list to indicate the starting tyres
+                if isinstance(receivedData[driver]["Stints"], list):
+                    curStint = "0"
+                    indvData = receivedData[driver]["Stints"][0]
+                else:
+                    # receivedData[driver]["Stints"] is a dict containing only 1 key
+                    curStint = next(
+                        iter(receivedData[driver]["Stints"])
+                    )  # Find key in O(1)
+                    indvData = receivedData[driver]["Stints"][curStint]
 
-                        # TotalLaps is the number of laps driven on current set of tyres
-                        # Includes laps driven on other sessions
-                        if "TotalLaps" in indvData:
-                            curLap = await self._get_current_lap(driver)
-                            tasks.append(
-                                self._redis.hset(
-                                    name=f"{driver}:{curLap}",
-                                    mapping={
-                                        "TyreAge": indvData["TotalLaps"],
-                                        "StintNumber": curStint,
-                                    },
-                                )
-                            )
+                # TotalLaps is the number of laps driven on current set of tyres
+                # Includes laps driven on other sessions
 
-                            tasks.append(
-                                self._kafka.send_and_wait(
-                                    "TyreAge", str(indvData["TotalLaps"]).encode()
-                                )
-                            )
-
-                        if ("LapTime" in indvData) and ("LapNumber" in indvData):
-                            tasks.append(
-                                self._redis.hset(
-                                    name=f'{driver}:{indvData["LapNumber"]}',
-                                    key="LapTime",
-                                    value=f'{indvData["LapTime"]}',
-                                )
-                            )
-                            tasks.append(
-                                self._redis.hset(
-                                    name=driver,
-                                    key="CurrentLap",
-                                    value=int(indvData["LapNumber"]) + 1,
-                                )
-                            )
-
-                        if ("Compound" in indvData) and (
-                            indvData["Compound"] != "UNKNOWN"
-                        ):
-                            curLap = await self._get_current_lap(driver)
-                            mapping = {
-                                "TyreType": f'{indvData["Compound"]}',
+                if "TotalLaps" in indvData:
+                    curLap = await self._get_current_lap(driver)
+                    tasks.append(
+                        self._redis.hset(
+                            name=f"{driver}:{curLap}",
+                            mapping={
+                                "TyreAge": indvData["TotalLaps"],
                                 "StintNumber": curStint,
-                            }
+                            },
+                        )
+                    )
 
-                            if "TotalLaps" in indvData:
-                                mapping["TyreAge"] = f'{indvData["TotalLaps"]}'
+                    tasks.append(
+                        self._kafka.send(
+                            topic="TyreAge",
+                            value=str(indvData["TotalLaps"]).encode(),
+                            key=driver.encode(),
+                        )
+                    )
 
-                            tasks.append(
-                                self._redis.hset(
-                                    name=f"{driver}:{int(curLap) + 1}",
-                                    mapping=mapping,
-                                )
-                            )
+                if ("LapTime" in indvData) and ("LapNumber" in indvData):
+                    tasks.append(
+                        self._redis.hset(
+                            name=f'{driver}:{indvData["LapNumber"]}',
+                            key="LapTime",
+                            value=f'{indvData["LapTime"]}',
+                        )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(
+                            topic="LapTime",
+                            key=driver.encode(),
+                            value=f'{indvData["LapTime"]},indvData["LapNumber"]'.encode(),
+                        )
+                    )
+
+                    tasks.append(
+                        self._redis.hset(
+                            name=driver,
+                            key="CurrentLap",
+                            value=int(indvData["LapNumber"]) + 1,
+                        )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(
+                            topic="CurrentLap",
+                            key=driver.encode(),
+                            value=f'{int(indvData["LapNumber"])+1}'.encode(),
+                        )
+                    )
+
+                if ("Compound" in indvData) and (indvData["Compound"] != "UNKNOWN"):
+                    curLap = await self._get_current_lap(driver)
+                    mapping = {
+                        "TyreType": f'{indvData["Compound"]}',
+                        "StintNumber": curStint,
+                    }
+
+                    # On the event that a cars pitbox is before the start/finish line,
+                    # the new tyre is fitted in the current lap, although it should only
+                    # be counted as having been fitted from the next lap onward
+                    if await self._redis.hexists(
+                        name=f"{driver}:{curLap}", key="PitIn"
+                    ):
+                        curLap = int(curLap) + 1
+
+                    tasks.append(
+                        self._redis.hset(
+                            name=f"{driver}:{curLap}",
+                            mapping=mapping,
+                        )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(
+                            topic="Tyre",
+                            key=driver.encode(),
+                            value=f'{indvData["Compound"]},{curStint}'.encode(),
+                        )
+                    )
 
         await asyncio.gather(*tasks)
 
@@ -136,69 +174,60 @@ class ProcessLiveData:
         # receivedData may contain information for more than 1 driver, where driver no. is the key
         for driver in receivedData:
             if "GapToLeader" in receivedData[driver]:
-                # broadcast gap to leader
+                # TODO: Calculate gap to leader at the end of a lap
                 pass
 
             if "IntervalToPositionAhead" in receivedData[driver]:
                 # broadcast gap to position ahead
                 pass
 
-            if "Sectors" in receivedData[driver]:
+            if ("Sectors" in receivedData[driver]) and (
+                isinstance(receivedData[driver]["Sectors"], dict)
+            ):
                 for indvSector in receivedData[driver]["Sectors"]:
-                    # Sometimes indvSector is a list due to poor formatting in the livedata.
-                    if isinstance(indvSector, str):
-                        if "Value" in receivedData[driver]["Sectors"][indvSector]:
-                            curLap = await self._get_current_lap(driver)
-                            sectorNumber = int(indvSector) + 1
-                            sectorTime = receivedData[driver]["Sectors"][indvSector][
-                                "Value"
-                            ]
-
-                            # Sometimes "Value" is empty due to poor formatting in the livedata
-                            if sectorTime != "":
-                                tasks.append(
-                                    self._redis.hset(
-                                        name=f"{driver}:{curLap}",
-                                        key=f"Sector{sectorNumber}Time",
-                                        value=sectorTime,
-                                    )
-                                )
-
-                            # TODO: Process personal/overall fastest sectors
-                            # TODO: Handle contingency if sector 3 time arrives after new lap signal
-
-            if "Speeds" in receivedData[driver]:
-                for indvSpeed in receivedData[driver]["Speeds"]:
-                    # Sometimes indvSpeed is a list due to poor formatting in the livedata.
-                    if isinstance(indvSpeed, str):
-                        speedTrap = receivedData[driver]["Speeds"]
+                    if "Value" in receivedData[driver]["Sectors"][indvSector]:
                         curLap = await self._get_current_lap(driver)
+                        sectorNumber = int(indvSector) + 1
+                        sectorTime = receivedData[driver]["Sectors"][indvSector][
+                            "Value"
+                        ]
 
-                        # Sometimes SpeedTrap["IX"]["Value"] is empty due to poor livedata
-                        try:
-                            if "I1" in speedTrap:
-                                mapping = {"Sector1SpeedTrap": speedTrap["I1"]["Value"]}
-                            elif "I2" in speedTrap:
-                                mapping = {"Sector2SpeedTrap": speedTrap["I2"]["Value"]}
-                            elif "FL" in speedTrap:
-                                mapping = {
-                                    "FinishLineSpeedTrap": speedTrap["FL"]["Value"]
-                                }
-                            elif "ST" in speedTrap:
-                                mapping = {
-                                    "BackStraightSpeedTrap": speedTrap["ST"]["Value"]
-                                }
-
+                        # Sometimes "Value" is empty due to poor formatting in the livedata
+                        if sectorTime != "":
                             tasks.append(
                                 self._redis.hset(
                                     name=f"{driver}:{curLap}",
-                                    mapping=mapping,
+                                    key=f"Sector{sectorNumber}Time",
+                                    value=sectorTime,
                                 )
                             )
-                        except:
-                            pass
 
-                        # TODO: Process personal/fastest speeds on speed traps
+                        # TODO: Process personal/overall fastest sectors
+                        # TODO: Handle contingency if sector 3 time arrives after new lap signal
+
+            if "Speeds" in receivedData[driver]:
+                for indvSpeed in receivedData[driver]["Speeds"]:
+                    speedTrap = receivedData[driver]["Speeds"][indvSpeed]
+                    curLap = await self._get_current_lap(driver)
+
+                    if ("Value" in speedTrap) and (speedTrap["Value"] != ""):
+                        if indvSpeed == "I1":
+                            mapping = {"Sector1SpeedTrap": speedTrap["Value"]}
+                        elif indvSpeed == "I2":
+                            mapping = {"Sector2SpeedTrap": speedTrap["Value"]}
+                        elif indvSpeed == "FL":
+                            mapping = {"FinishLineSpeedTrap": speedTrap["Value"]}
+                        elif indvSpeed == "ST":
+                            mapping = {"BackStraightSpeedTrap": speedTrap["Value"]}
+
+                        tasks.append(
+                            self._redis.hset(
+                                name=f"{driver}:{curLap}",
+                                mapping=mapping,
+                            )
+                        )
+
+                    # TODO: Process personal/fastest speeds on speed traps
 
             if "InPit" in receivedData[driver]:
                 if (receivedData[driver]["InPit"] == "true") and (
@@ -267,7 +296,7 @@ class ProcessLiveData:
             )
         )
 
-        asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     async def _process_session_data(self, msg):
         """
@@ -294,7 +323,7 @@ class ProcessLiveData:
                 self._redis.hset(name="Session", key="EndTime", value=timestamp)
             )
 
-        asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     def _get_session_status(self, d):
         """Find SessionStatus key inside a nested dictionary"""
@@ -375,7 +404,7 @@ class ProcessLiveData:
                         )
                     )
 
-        asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
     async def process(self, msg, topic):
         # if topic == "TimingAppData":
@@ -385,16 +414,14 @@ class ProcessLiveData:
 
 async def test():
     Processor = ProcessLiveData()
-    # await Processor.start_kafka_producer()
-    fileH = open(
-        "jsonStreams/RaceControlMessages.jsonStream", "r", encoding="utf-8-sig"
-    )
+    await Processor.start_kafka_producer()
+    fileH = open("jsonStreams/TimingData.jsonStream", "r", encoding="utf-8-sig")
 
     for line in fileH:
-        await Processor._process_race_control_messages(line)
+        await Processor._process_timing_data(line)
 
     fileH.close()
-    # await Processor.stop_kafka_producer()
+    await Processor.stop_kafka_producer()
 
 
 asyncio.run(test())

@@ -1,4 +1,3 @@
-
 hash {
   key: value
 }
@@ -29,7 +28,7 @@ Session {
     EndTime : Timestamp
 }
 
-# lap attribute is kept to the last since it is optional
+# lap attribute is kept to the last since it is optional. Practice & Quali sessions do not have laps associated with RCMs
 RaceControlMessages {
     MessageNum : Str (Other,Utc,Message,Lap)
     MessageNum : Str (Drs,Utc,Status,Lap)

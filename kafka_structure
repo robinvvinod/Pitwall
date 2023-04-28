@@ -1,0 +1,19 @@
+topic {
+    key : value
+}
+
+TyreAge {
+    driver : CurrentTyreAge
+}
+
+LapTime {
+    driver : LapTime,LapNumber
+}
+
+CurrentLap {
+    driver : CurrentLap
+}
+
+Tyre {
+    driver : CurrentTyreType,StintNumber
+}
