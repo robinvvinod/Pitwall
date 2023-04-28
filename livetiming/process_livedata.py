@@ -99,7 +99,7 @@ class ProcessLiveData:
                         self._kafka.send(
                             topic="LapTime",
                             key=driver.encode(),
-                            value=f'{indvData["LapTime"]},indvData["LapNumber"]'.encode(),
+                            value=f'{indvData["LapTime"]},{indvData["LapNumber"]}'.encode(),
                         )
                     )
 

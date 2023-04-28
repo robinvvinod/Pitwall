@@ -67,22 +67,31 @@ class Transport:
         except RuntimeError:
             self.ws_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.ws_loop)
-        self.invoke_queue = asyncio.Queue(loop=self.ws_loop)
+        self.invoke_queue = asyncio.Queue()
 
     def _connect(self):
-        self._conn_handler = asyncio.ensure_future(self._socket(self.ws_loop), loop=self.ws_loop)
+        self._conn_handler = asyncio.ensure_future(
+            self._socket(self.ws_loop), loop=self.ws_loop
+        )
 
     async def _socket(self, loop):
-        async with websockets.connect(self._ws_params.socket_url, extra_headers=self._ws_params.headers,
-                                      loop=loop) as self.ws:
+        async with websockets.connect(
+            self._ws_params.socket_url, extra_headers=self._ws_params.headers, loop=loop
+        ) as self.ws:
             self._connection.started = True
             await self._master_handler(self.ws)
 
     async def _master_handler(self, ws):
-        consumer_task = asyncio.ensure_future(self._consumer_handler(ws), loop=self.ws_loop)
-        producer_task = asyncio.ensure_future(self._producer_handler(ws), loop=self.ws_loop)
-        done, pending = await asyncio.wait([consumer_task, producer_task],
-                                           loop=self.ws_loop, return_when=asyncio.FIRST_EXCEPTION)
+        consumer_task = asyncio.ensure_future(
+            self._consumer_handler(ws), loop=self.ws_loop
+        )
+        producer_task = asyncio.ensure_future(
+            self._producer_handler(ws), loop=self.ws_loop
+        )
+        done, pending = await asyncio.wait(
+            [consumer_task, producer_task],
+            return_when=asyncio.FIRST_EXCEPTION,
+        )
 
         for task in pending:
             task.cancel()
@@ -99,9 +108,9 @@ class Transport:
             try:
                 event = await self.invoke_queue.get()
                 if event is not None:
-                    if event.type == 'INVOKE':
+                    if event.type == "INVOKE":
                         await ws.send(dumps(event.message))
-                    elif event.type == 'CLOSE':
+                    elif event.type == "CLOSE":
                         await ws.close()
                         while ws.open is True:
                             await asyncio.sleep(0.1)
