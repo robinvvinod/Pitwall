@@ -27,12 +27,12 @@ class ProcessLiveData:
     async def stop_kafka_producer(self):
         await self._kafka.stop()
 
-    async def _get_current_lap(self, driver) -> str:
+    async def _get_current_lap(self, driver) -> int:
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
         if curLap is None:
-            curLap = "0"
-        return curLap
+            return 0
+        return int(curLap)
 
     async def _process_timing_app_data(self, msg, timestamp):
         """
@@ -82,16 +82,16 @@ class ProcessLiveData:
                             )
                         )
 
-                    # if ("LapTime" in indvData) and ("LapNumber" in indvData):
-                    #     curLap = await self._get_current_lap(driver)
+                    if ("LapTime" in indvData) and ("LapNumber" in indvData):
+                        curLap = await self._get_current_lap(driver)
 
-                    #     tasks.append(
-                    #         self._redis.hset(
-                    #             name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
-                    #             key="LapTime",
-                    #             value=f'{indvData["LapTime"]}',
-                    #         )
-                    #     )
+                        tasks.append(
+                            self._redis.hset(
+                                name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
+                                key="LapTime",
+                                value=f'{indvData["LapTime"]}',
+                            )
+                        )
 
                     if ("Compound" in indvData) and (indvData["Compound"] != "UNKNOWN"):
                         curLap = await self._get_current_lap(driver)
@@ -103,10 +103,10 @@ class ProcessLiveData:
                         # On the event that a cars pitbox is before the start/finish line,
                         # the new tyre is fitted in the current lap, although it should only
                         # be counted as having been fitted from the next lap onward
-                        # if await self._redis.hexists(
-                        #     name=f"{driver}:{curLap}", key="PitIn"
-                        # ):
-                        #     curLap = int(curLap) + 1
+                        if await self._redis.hexists(
+                            name=f"{driver}:{curLap}", key="PitIn"
+                        ):
+                            curLap += 1
 
                         tasks.append(
                             self._redis.hset(
@@ -153,9 +153,6 @@ class ProcessLiveData:
 
                         # Sometimes "Value" is empty due to poor formatting in the livedata
                         if sectorTime != "":
-                            if driver == "1":
-                                print(f"Sector {sectorNumber} time {sectorTime}")
-
                             tasks.append(
                                 self._redis.hset(
                                     name=f"{driver}:{curLap}",
@@ -174,6 +171,7 @@ class ProcessLiveData:
                                     name=f"{driver}:{curLap}", key="Sector2Time"
                                 )
 
+                                # We only calculate LapTime if all 3 sectors are present. Otherwise, it is an outlap or red flagged lap
                                 if (sector1Time is not None) and (
                                     sector2Time is not None
                                 ):
@@ -198,9 +196,6 @@ class ProcessLiveData:
                                         )
                                     )
 
-                                    if driver == "1":
-                                        print(f"Lap {curLap} time {lapTime}")
-
                                 # If driver crossed start/finish line and is not currently in the pits, start a new lap
                                 if (
                                     await self._redis.hexists(
@@ -212,18 +207,17 @@ class ProcessLiveData:
                                         self._redis.hset(
                                             name=driver,
                                             key="CurrentLap",
-                                            value=f"{int(curLap) + 1}",
+                                            value=f"{curLap + 1}",
                                         )
                                     )
 
-                                    if driver == "1":
-                                        print(f"Starting lap {int(curLap) + 1}")
-
                         # TODO: Process personal/overall fastest sectors
-                        # TODO: Handle contingency if sector 3 time arrives after new lap signal
 
             if "Speeds" in msg[driver]:
                 for indvSpeed in msg[driver]["Speeds"]:
+                    # TODO: Finish line speed trap should be added to correct lap, curLap may already be next lap if sector 3 time was processed
+                    # before FL speed trap was detected.
+
                     speedTrap = msg[driver]["Speeds"][indvSpeed]
                     curLap = await self._get_current_lap(driver)
 
@@ -233,6 +227,17 @@ class ProcessLiveData:
                         elif indvSpeed == "I2":
                             mapping = {"Sector2SpeedTrap": speedTrap["Value"]}
                         elif indvSpeed == "FL":
+                            # FL speed could arrive after sector 3 time and new lap is created.
+                            # If sector 2 time does not exist, FL speed should be added to previous lap
+
+                            if (
+                                await self._redis.hexists(
+                                    name=f"{driver}:{curLap}", key="Sector2Time"
+                                )
+                                is False
+                            ):
+                                curLap -= 1
+
                             mapping = {"FinishLineSpeedTrap": speedTrap["Value"]}
                         elif indvSpeed == "ST":
                             mapping = {"BackStraightSpeedTrap": speedTrap["Value"]}
@@ -273,12 +278,9 @@ class ProcessLiveData:
                     # Start a new lap when driver exits pit
                     tasks.append(
                         self._redis.hset(
-                            name=driver, key="CurrentLap", value=f"{int(curLap) + 1}"
+                            name=driver, key="CurrentLap", value=f"{curLap + 1}"
                         )
                     )
-
-                    if driver == "1":
-                        print(f"driver exited pit to start lap {int(curLap) + 1}")
 
                     tasks.append(
                         self._redis.hset(
