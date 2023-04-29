@@ -31,7 +31,7 @@ class ProcessLiveData:
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
         if curLap is None:
-            curLap = "1"
+            curLap = "0"
         return curLap
 
     async def _process_timing_app_data(self, msg, timestamp):
@@ -53,101 +53,67 @@ class ProcessLiveData:
         for driver in msg:
             # Filter out noise. All important information is under key "Stints"
             if "Stints" in msg[driver]:
-                # During a race, the first message sent has no Stint number as the race hasn't started yet
-                # The first message is a dict wrapped in a list to indicate the starting tyres
-                if isinstance(msg[driver]["Stints"], list):
-                    curStint = "0"
-                    indvData = msg[driver]["Stints"][0]
-                else:
-                    # msg[driver]["Stints"] is a dict containing only 1 key
-                    curStint = next(iter(msg[driver]["Stints"]))  # Find key in O(1)
+                for curStint in msg[driver]["Stints"]:
+                    if not isinstance(curStint, str):
+                        continue
+
                     indvData = msg[driver]["Stints"][curStint]
 
-                # TotalLaps is the number of laps driven on current set of tyres
-                # Includes laps driven on other sessions
+                    # TotalLaps is the number of laps driven on current set of tyres
+                    # Includes laps driven on other sessions
 
-                if "TotalLaps" in indvData:
-                    curLap = await self._get_current_lap(driver)
-                    tasks.append(
-                        self._redis.hset(
-                            name=f"{driver}:{curLap}",
-                            mapping={
-                                "TyreAge": indvData["TotalLaps"],
-                                "StintNumber": curStint,
-                            },
+                    if "TotalLaps" in indvData:
+                        curLap = await self._get_current_lap(driver)
+                        tasks.append(
+                            self._redis.hset(
+                                name=f"{driver}:{curLap}",
+                                mapping={
+                                    "TyreAge": indvData["TotalLaps"],
+                                    "StintNumber": curStint,
+                                },
+                            )
                         )
-                    )
 
-                    tasks.append(
-                        self._kafka.send(
-                            topic="TyreAge",
-                            value=str(indvData["TotalLaps"]).encode(),
-                            key=driver.encode(),
+                        tasks.append(
+                            self._kafka.send(
+                                topic="TyreAge",
+                                value=str(indvData["TotalLaps"]).encode(),
+                                key=driver.encode(),
+                            )
                         )
-                    )
 
-                if ("LapTime" in indvData) and ("LapNumber" in indvData):
-                    tasks.append(
-                        self._redis.hset(
-                            name=f'{driver}:{indvData["LapNumber"]}',
-                            key="LapTime",
-                            value=f'{indvData["LapTime"]}',
+                    # if ("LapTime" in indvData) and ("LapNumber" in indvData):
+                    #     curLap = await self._get_current_lap(driver)
+
+                    #     tasks.append(
+                    #         self._redis.hset(
+                    #             name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
+                    #             key="LapTime",
+                    #             value=f'{indvData["LapTime"]}',
+                    #         )
+                    #     )
+
+                    if ("Compound" in indvData) and (indvData["Compound"] != "UNKNOWN"):
+                        curLap = await self._get_current_lap(driver)
+                        mapping = {
+                            "TyreType": f'{indvData["Compound"]}',
+                            "StintNumber": curStint,
+                        }
+
+                        # On the event that a cars pitbox is before the start/finish line,
+                        # the new tyre is fitted in the current lap, although it should only
+                        # be counted as having been fitted from the next lap onward
+                        # if await self._redis.hexists(
+                        #     name=f"{driver}:{curLap}", key="PitIn"
+                        # ):
+                        #     curLap = int(curLap) + 1
+
+                        tasks.append(
+                            self._redis.hset(
+                                name=f"{driver}:{curLap}",
+                                mapping=mapping,
+                            )
                         )
-                    )
-
-                    tasks.append(
-                        self._kafka.send(
-                            topic="LapTime",
-                            key=driver.encode(),
-                            value=f'{indvData["LapTime"]},{indvData["LapNumber"]}'.encode(),
-                        )
-                    )
-
-                    tasks.append(
-                        self._redis.hset(
-                            name=driver,
-                            key="CurrentLap",
-                            value=int(indvData["LapNumber"]) + 1,
-                        )
-                    )
-
-                    tasks.append(
-                        self._kafka.send(
-                            topic="CurrentLap",
-                            key=driver.encode(),
-                            value=f'{int(indvData["LapNumber"])+1}'.encode(),
-                        )
-                    )
-
-                if ("Compound" in indvData) and (indvData["Compound"] != "UNKNOWN"):
-                    curLap = await self._get_current_lap(driver)
-                    mapping = {
-                        "TyreType": f'{indvData["Compound"]}',
-                        "StintNumber": curStint,
-                    }
-
-                    # On the event that a cars pitbox is before the start/finish line,
-                    # the new tyre is fitted in the current lap, although it should only
-                    # be counted as having been fitted from the next lap onward
-                    if await self._redis.hexists(
-                        name=f"{driver}:{curLap}", key="PitIn"
-                    ):
-                        curLap = int(curLap) + 1
-
-                    tasks.append(
-                        self._redis.hset(
-                            name=f"{driver}:{curLap}",
-                            mapping=mapping,
-                        )
-                    )
-
-                    tasks.append(
-                        self._kafka.send(
-                            topic="Tyre",
-                            key=driver.encode(),
-                            value=f'{indvData["Compound"]},{curStint}'.encode(),
-                        )
-                    )
 
         await asyncio.gather(*tasks)
 
@@ -187,6 +153,9 @@ class ProcessLiveData:
 
                         # Sometimes "Value" is empty due to poor formatting in the livedata
                         if sectorTime != "":
+                            if driver == "1":
+                                print(f"Sector {sectorNumber} time {sectorTime}")
+
                             tasks.append(
                                 self._redis.hset(
                                     name=f"{driver}:{curLap}",
@@ -194,6 +163,61 @@ class ProcessLiveData:
                                     value=sectorTime,
                                 )
                             )
+
+                            # If driver has a sector 3 time, he has crossed the start/finish line
+                            # LapTime is calculated from summing individual sectors
+                            if sectorNumber == 3:
+                                sector1Time = await self._redis.hget(
+                                    name=f"{driver}:{curLap}", key="Sector1Time"
+                                )
+                                sector2Time = await self._redis.hget(
+                                    name=f"{driver}:{curLap}", key="Sector2Time"
+                                )
+
+                                if (sector1Time is not None) and (
+                                    sector2Time is not None
+                                ):
+                                    lapTime = (
+                                        float(sector1Time)
+                                        + float(sector2Time)
+                                        + float(sectorTime)
+                                    )
+
+                                    min = int(lapTime // 60)
+                                    remainder = str(round(lapTime % 60, 3)).split(".")
+                                    sec = remainder[0]
+                                    ms = remainder[1][:3]
+
+                                    lapTime = f"{min}:{sec:0>2}.{ms}"
+
+                                    tasks.append(
+                                        self._redis.hset(
+                                            name=f"{driver}:{curLap}",
+                                            key="LapTime",
+                                            value=lapTime,
+                                        )
+                                    )
+
+                                    if driver == "1":
+                                        print(f"Lap {curLap} time {lapTime}")
+
+                                # If driver crossed start/finish line and is not currently in the pits, start a new lap
+                                if (
+                                    await self._redis.hexists(
+                                        name=f"{driver}:{curLap}", key="PitIn"
+                                    )
+                                    is False
+                                ):
+                                    tasks.append(
+                                        self._redis.hset(
+                                            name=driver,
+                                            key="CurrentLap",
+                                            value=f"{int(curLap) + 1}",
+                                        )
+                                    )
+
+                                    if driver == "1":
+                                        print(f"Starting lap {int(curLap) + 1}")
 
                         # TODO: Process personal/overall fastest sectors
                         # TODO: Handle contingency if sector 3 time arrives after new lap signal
@@ -223,36 +247,44 @@ class ProcessLiveData:
                     # TODO: Process personal/fastest speeds on speed traps
 
             if "InPit" in msg[driver]:
-                if (msg[driver]["InPit"] == "true") and (
-                    "NumberOfPitStops" in msg[driver]
-                ):
+                if msg[driver]["InPit"] is True:
                     # Driver just entered pit
                     curLap = await self._get_current_lap(driver)
-                    tasks.append(
-                        self._redis.hset(
-                            name=driver,
-                            key="NumberOfPitStops",
-                            value=msg[driver]["NumberOfPitStops"],
-                        )
-                    )
 
                     tasks.append(
                         self._redis.hset(
-                            name=f"{driver}:{curLap}", key="PitIn", value=True
+                            name=f"{driver}:{curLap}", key="PitIn", value="true"
                         )
                     )
-                elif (msg[driver]["InPit"] == "false") and ("PitOut" in msg[driver]):
-                    # Driver just exited pit
-                    curLap = await self._get_current_lap(driver)
-                    tasks.append(
-                        self._redis.hset(
-                            name=f"{driver}:{curLap}", key="PitOut", value=True
+
+                    if "NumberOfPitStops" in msg[driver]:
+                        tasks.append(
+                            self._redis.hset(
+                                name=driver,
+                                key="NumberOfPitStops",
+                                value=msg[driver]["NumberOfPitStops"],
+                            )
                         )
-                    )
 
                 else:
-                    # if InPit == false and PitOut is not present, driver left pit for first time
-                    pass
+                    # Driver just exited pit
+                    curLap = await self._get_current_lap(driver)
+
+                    # Start a new lap when driver exits pit
+                    tasks.append(
+                        self._redis.hset(
+                            name=driver, key="CurrentLap", value=f"{int(curLap) + 1}"
+                        )
+                    )
+
+                    if driver == "1":
+                        print(f"driver exited pit to start lap {int(curLap) + 1}")
+
+                    tasks.append(
+                        self._redis.hset(
+                            name=f"{driver}:{curLap}", key="PitOut", value="true"
+                        )
+                    )
 
                 # TODO: Use timestamps to determine pit stop time
 
@@ -398,3 +430,30 @@ class ProcessLiveData:
             await self._process_race_control_messages(msg, timestamp)
         elif topic == "SessionData":
             await self._process_session_data(msg, timestamp)
+
+
+import ast
+
+
+async def test():
+    Processor = ProcessLiveData()
+    await Processor.start_kafka_producer()
+    fileH = open("jsonStreams/Qualifying/saved_data.txt", "r")
+
+    for line in fileH:
+        line = line.strip()
+        msg = ast.literal_eval(line)
+
+        try:
+            await Processor.process(topic=msg[0], msg=msg[1], timestamp=msg[2])
+        except Exception as e:
+            pass
+            # print("Exception on data : ", end=" ")
+            # print(line, end=" excepton: ")
+            # print(e)
+
+    fileH.close()
+    await Processor.stop_kafka_producer()
+
+
+asyncio.run(test())
