@@ -1,6 +1,9 @@
 import redis.asyncio as redis
 import aiokafka
 import asyncio
+import ujson
+import zlib
+import base64
 
 
 class ProcessLiveData:
@@ -215,9 +218,6 @@ class ProcessLiveData:
 
             if "Speeds" in msg[driver]:
                 for indvSpeed in msg[driver]["Speeds"]:
-                    # TODO: Finish line speed trap should be added to correct lap, curLap may already be next lap if sector 3 time was processed
-                    # before FL speed trap was detected.
-
                     speedTrap = msg[driver]["Speeds"][indvSpeed]
                     curLap = await self._get_current_lap(driver)
 
@@ -421,8 +421,62 @@ class ProcessLiveData:
 
         await asyncio.gather(*tasks)
 
+    async def _process_car_data(self, msg):
+        # kafka stream uncompressed data
+
+        msg = zlib.decompress(base64.b64decode(msg), -zlib.MAX_WBITS).decode()
+        msg = ujson.loads(msg)["Entries"]
+
+        tasks = []
+
+        for item in msg:
+            timestamp = item["Utc"]
+            data = item["Cars"]
+
+            for driver in data:
+                curLap = await self._get_current_lap(driver)
+
+                tasks.append(
+                    self._redis.hset(
+                        name=f"{driver}:{curLap}:CarData",
+                        key=timestamp,
+                        value=str(data[driver]["Channels"]),
+                    )
+                )
+
+        await asyncio.gather(*tasks)
+
+    async def _process_position_data(self, msg):
+        # kafka stream uncompressed dat
+
+        msg = zlib.decompress(base64.b64decode(msg), -zlib.MAX_WBITS).decode()
+        msg = ujson.loads(msg)["Position"]
+
+        tasks = []
+
+        for item in msg:
+            timestamp = item["Timestamp"]
+            data = item["Entries"]
+
+            for driver in data:
+                curLap = await self._get_current_lap(driver)
+
+                tasks.append(
+                    self._redis.hset(
+                        name=f"{driver}:{curLap}:PositionData",
+                        key=timestamp,
+                        value=str(data[driver]),
+                    )
+                )
+
+        await asyncio.gather(*tasks)
+
     async def process(self, topic, msg, timestamp):
-        if topic == "TimingAppData":
+        if topic == "CarData.z":
+            await self._process_car_data(msg)
+        elif topic == "Position.z":
+            await self._process_position_data(msg)
+        elif topic == "TimingAppData":
             await self._process_timing_app_data(msg, timestamp)
         elif topic == "TimingData":
             await self._process_timing_data(msg, timestamp)
@@ -435,6 +489,7 @@ class ProcessLiveData:
 
 
 import ast
+import time
 
 
 async def test():
@@ -447,12 +502,12 @@ async def test():
         msg = ast.literal_eval(line)
 
         try:
+            # start = time.time()
             await Processor.process(topic=msg[0], msg=msg[1], timestamp=msg[2])
+            # end = time.time()
+            # print(f"{(end - start)*100:.10f}ms")
         except Exception as e:
-            pass
-            # print("Exception on data : ", end=" ")
-            # print(line, end=" excepton: ")
-            # print(e)
+            print(f"\nData : {line}\nException : {e}\n")
 
     fileH.close()
     await Processor.stop_kafka_producer()
