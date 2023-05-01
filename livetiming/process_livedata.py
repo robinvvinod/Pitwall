@@ -20,15 +20,21 @@ class ProcessLiveData:
 
     def __init__(self, redis_url="localhost", kafka_url="localhost:9092"):
         self._redis = redis.Redis(host=redis_url, decode_responses=True)
-        self._kafka = aiokafka.AIOKafkaProducer(bootstrap_servers=kafka_url)
+        self._kafka = aiokafka.AIOKafkaProducer(
+            bootstrap_servers=kafka_url,
+            key_serializer=self._serializer,
+            value_serializer=self._serializer,
+        )
 
         self.sessionStatus = None
         self.retiredDrivers = set()
 
-    async def start_kafka_producer(self):
+    async def start(self):
+        await self._redis.flushall()
         await self._kafka.start()
 
-    async def stop_kafka_producer(self):
+    async def stop(self):
+        await self._redis.bgsave()
         await self._kafka.stop()
 
     async def _get_current_lap(self, driver) -> int:
@@ -38,7 +44,12 @@ class ProcessLiveData:
             return 0
         return int(curLap)
 
-    async def _process_timing_app_data(self, msg, timestamp):
+    def _serializer(self, value) -> bytes:
+        if not isinstance(value, str):
+            value = str(value)
+        return value.encode()
+
+    async def _process_timing_app_data(self, msg):
         """
         Processes data from https://livetiming.formula1.com/static/.../TimingAppData.jsonStream
 
@@ -81,8 +92,8 @@ class ProcessLiveData:
                         tasks.append(
                             self._kafka.send(
                                 topic="TyreAge",
-                                value=str(indvData["TotalLaps"]).encode(),
-                                key=driver.encode(),
+                                value=indvData["TotalLaps"],
+                                key=driver,
                             )
                         )
 
@@ -94,6 +105,14 @@ class ProcessLiveData:
                                 name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
                                 key="LapTime",
                                 value=f'{indvData["LapTime"]}',
+                            )
+                        )
+
+                        tasks.append(
+                            self._kafka.send(
+                                topic="LapTime",
+                                key=driver,
+                                value=f'{indvData["LapTime"]},{int(indvData["LapNumber"]) - 1}',
                             )
                         )
 
@@ -119,9 +138,17 @@ class ProcessLiveData:
                             )
                         )
 
+                        tasks.append(
+                            self._kafka.send(
+                                topic="Tyre",
+                                key=driver,
+                                value=f'{indvData["Compound"]},{curStint}',
+                            )
+                        )
+
         await asyncio.gather(*tasks)
 
-    async def _process_timing_data(self, msg, timestamp):
+    async def _process_timing_data(self, msg):
         """
         Processes data from https://livetiming.formula1.com/static/.../TimingData.jsonStream
 
@@ -140,11 +167,22 @@ class ProcessLiveData:
         for driver in msg:
             if "GapToLeader" in msg[driver]:
                 # TODO: Calculate gap to leader at the end of a lap
-                pass
+                tasks.append(
+                    self._kafka.send(
+                        topic="GapToLeader",
+                        key=driver,
+                        value=msg[driver]["GapToLeader"],
+                    )
+                )
 
             if "IntervalToPositionAhead" in msg[driver]:
-                # broadcast gap to position ahead
-                pass
+                tasks.append(
+                    self._kafka.send(
+                        topic="IntervalToPositionAhead",
+                        key=driver,
+                        value=msg[driver]["IntervalToPositionAhead"],
+                    )
+                )
 
             if ("Sectors" in msg[driver]) and (
                 isinstance(msg[driver]["Sectors"], dict)
@@ -162,6 +200,14 @@ class ProcessLiveData:
                                     name=f"{driver}:{curLap}",
                                     key=f"Sector{sectorNumber}Time",
                                     value=sectorTime,
+                                )
+                            )
+
+                            tasks.append(
+                                self._kafka.send(
+                                    topic="SectorTime",
+                                    key=driver,
+                                    value=f"{sectorTime},{sectorNumber},{curLap}",
                                 )
                             )
 
@@ -200,6 +246,14 @@ class ProcessLiveData:
                                         )
                                     )
 
+                                    tasks.append(
+                                        self._kafka.send(
+                                            topic="LapTime",
+                                            key=driver,
+                                            value=f"{lapTime},{curLap}",
+                                        )
+                                    )
+
                                 # If driver crossed start/finish line and is not currently in the pits, start a new lap
                                 if (
                                     await self._redis.hexists(
@@ -215,6 +269,14 @@ class ProcessLiveData:
                                         )
                                     )
 
+                                    tasks.append(
+                                        self._kafka.send(
+                                            topic="CurrentLap",
+                                            key=driver,
+                                            value=f"{curLap + 1}",
+                                        )
+                                    )
+
                         # TODO: Process personal/overall fastest sectors
 
             if "Speeds" in msg[driver]:
@@ -222,6 +284,7 @@ class ProcessLiveData:
                     speedTrap = msg[driver]["Speeds"][indvSpeed]
                     curLap = await self._get_current_lap(driver)
 
+                    mapping = {}
                     if ("Value" in speedTrap) and (speedTrap["Value"] != ""):
                         if indvSpeed == "I1":
                             mapping = {"Sector1SpeedTrap": speedTrap["Value"]}
@@ -250,6 +313,15 @@ class ProcessLiveData:
                             )
                         )
 
+                        _STIdentifier = next(iter(mapping))
+                        tasks.append(
+                            self._kafka.send(
+                                topic="Speed",
+                                key=driver,
+                                value=f"{_STIdentifier},{mapping[_STIdentifier]},{curLap}",
+                            )
+                        )
+
                     # TODO: Process personal/fastest speeds on speed traps
 
             if "InPit" in msg[driver]:
@@ -263,11 +335,23 @@ class ProcessLiveData:
                         )
                     )
 
+                    tasks.append(
+                        self._kafka.send(topic="InPit", key=driver, value=curLap)
+                    )
+
                     if "NumberOfPitStops" in msg[driver]:
                         tasks.append(
                             self._redis.hset(
                                 name=driver,
                                 key="NumberOfPitStops",
+                                value=msg[driver]["NumberOfPitStops"],
+                            )
+                        )
+
+                        tasks.append(
+                            self._kafka.send(
+                                topic="NumberOfPitStops",
+                                key=driver,
                                 value=msg[driver]["NumberOfPitStops"],
                             )
                         )
@@ -284,16 +368,26 @@ class ProcessLiveData:
                     )
 
                     tasks.append(
+                        self._kafka.send(
+                            topic="CurrentLap", key=driver, value=f"{curLap + 1}"
+                        )
+                    )
+
+                    tasks.append(
                         self._redis.hset(
                             name=f"{driver}:{curLap}", key="PitOut", value="true"
                         )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(topic="PitOut", key=driver, value=curLap)
                     )
 
                 # TODO: Use timestamps to determine pit stop time
 
         await asyncio.gather(*tasks)
 
-    async def _process_lap_count(self, msg, timestamp):
+    async def _process_lap_count(self, msg):
         """
         Processes data from https://livetiming.formula1.com/static/.../LapCount.jsonStream
 
@@ -313,8 +407,20 @@ class ProcessLiveData:
                 )
             )
 
+            tasks.append(
+                self._kafka.send(
+                    topic="TotalLaps", key="TotalLaps", value=msg["TotalLaps"]
+                )
+            )
+
         tasks.append(
             self._redis.hset(name="Session", key="CurrentLap", value=msg["CurrentLap"])
+        )
+
+        tasks.append(
+            self._kafka.send(
+                topic="LapCount", key="CurrentLap", value=msg["CurrentLap"]
+            )
         )
 
         await asyncio.gather(*tasks)
@@ -335,10 +441,19 @@ class ProcessLiveData:
             tasks.append(
                 self._redis.hset(name="Session", key="StartTime", value=timestamp)
             )
+            tasks.append(
+                self._kafka.send(
+                    topic="SessionStatus", key="StartTime", value=timestamp
+                )
+            )
+
         elif self._get_session_status(msg) == "Finished":
             self.sessionStatus = "Finished"
             tasks.append(
                 self._redis.hset(name="Session", key="EndTime", value=timestamp)
+            )
+            tasks.append(
+                self._kafka.send(topic="SessionStatus", key="EndTime", value=timestamp)
             )
 
         await asyncio.gather(*tasks)
@@ -351,7 +466,7 @@ class ProcessLiveData:
             if isinstance(value, dict):
                 return self._get_session_status(value)
 
-    async def _process_race_control_messages(self, msg, timestamp):
+    async def _process_race_control_messages(self, msg):
         """
         Processes data from https://livetiming.formula1.com/static/.../RaceControlMessages.jsonStream
 
@@ -384,12 +499,26 @@ class ProcessLiveData:
                         )
                     )
 
+                    tasks.append(
+                        self._kafka.send(
+                            topic="RCM",
+                            key="Other",
+                            value=f'{utc},{data["Message"]}{res}',
+                        )
+                    )
+
                 elif data["Category"] == "Drs":
                     tasks.append(
                         self._redis.hset(
                             name="RaceControlMessages",
                             key=messageNum,
                             value=f'Drs,{utc},{data["Status"]}{res}',
+                        )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(
+                            topic="RCM", key="DRS", value=f'{utc},{data["Status"]}{res}'
                         )
                     )
 
@@ -402,6 +531,14 @@ class ProcessLiveData:
                         )
                     )
 
+                    tasks.append(
+                        self._kafka.send(
+                            topic="RCM",
+                            key="Flag",
+                            value=f'{utc},{data["Flag"]},{data["Scope"]},{data["Message"]}{res}',
+                        )
+                    )
+
                 elif data["Category"] == "SafetyCar":
                     tasks.append(
                         self._redis.hset(
@@ -411,12 +548,28 @@ class ProcessLiveData:
                         )
                     )
 
+                    tasks.append(
+                        self._kafka.send(
+                            topic="RCM",
+                            key="SafetyCar",
+                            value=f'{utc},{data["Mode"]},{data["Status"]},{data["Message"]}{res}',
+                        )
+                    )
+
                 elif data["Category"] == "CarEvent":
                     tasks.append(
                         self._redis.hset(
                             name="RaceControlMessages",
                             key=messageNum,
                             value=f'CarEvent,{utc},{data["RacingNumber"]},{data["Message"]}{res}',
+                        )
+                    )
+
+                    tasks.append(
+                        self._kafka.send(
+                            topic="RCM",
+                            key="CarEvent",
+                            value=f'{utc},{data["RacingNumber"]},{data["Message"]}{res}',
                         )
                     )
 
@@ -461,11 +614,19 @@ class ProcessLiveData:
 
                 curLap = await self._get_current_lap(driver)
 
+                # tasks.append(
+                #     self._redis.hset(
+                #         name=f"{driver}:{curLap}:CarData",
+                #         key=timestamp,
+                #         value=str(data[driver]["Channels"]),
+                #     )
+                # )
+
                 tasks.append(
-                    self._redis.hset(
-                        name=f"{driver}:{curLap}:CarData",
-                        key=timestamp,
-                        value=str(data[driver]["Channels"]),
+                    self._kafka.send(
+                        topic="CarData",
+                        key=driver,
+                        value=f'{str(data[driver]["Channels"])},{curLap},{timestamp}',
                     )
                 )
 
@@ -497,11 +658,19 @@ class ProcessLiveData:
 
                 curLap = await self._get_current_lap(driver)
 
+                # tasks.append(
+                #     self._redis.hset(
+                #         name=f"{driver}:{curLap}:PositionData",
+                #         key=timestamp,
+                #         value=str(data[driver]),
+                #     )
+                # )
+
                 tasks.append(
-                    self._redis.hset(
-                        name=f"{driver}:{curLap}:PositionData",
-                        key=timestamp,
-                        value=str(data[driver]),
+                    self._kafka.send(
+                        topic="PositionData",
+                        key=driver,
+                        value=f"{str(data[driver])},{curLap},{timestamp}",
                     )
                 )
 
@@ -526,28 +695,42 @@ class ProcessLiveData:
                         )
                     )
 
+                    tasks.append(
+                        self._kafka.send(
+                            topic="Position", key=driver, value=msg[driver]["Position"]
+                        )
+                    )
+
             if "IsOut" in msg[driver]:
                 if msg[driver]["IsOut"] is True:
                     tasks.append(
                         self._redis.hset(name=driver, key="Retired", value="true")
+                    )
+                    tasks.append(
+                        self._kafka.send(topic="Retired", key=driver, value="true")
                     )
                     self.retiredDrivers.add(driver)
 
         asyncio.gather(*tasks)
 
     async def process(self, topic, msg, timestamp):
+        if self.sessionStatus != "Started":
+            if topic == "SessionData":
+                await self._process_session_data(msg, timestamp)
+            return
+
         if topic == "CarData.z":
             await self._process_car_data(msg)
         elif topic == "Position.z":
             await self._process_position_data(msg)
         elif topic == "TimingAppData":
-            await self._process_timing_app_data(msg, timestamp)
+            await self._process_timing_app_data(msg)
         elif topic == "TimingData":
-            await self._process_timing_data(msg, timestamp)
+            await self._process_timing_data(msg)
         elif topic == "LapCount":
-            await self._process_lap_count(msg, timestamp)
+            await self._process_lap_count(msg)
         elif topic == "RaceControlMessages":
-            await self._process_race_control_messages(msg, timestamp)
+            await self._process_race_control_messages(msg)
         elif topic == "SessionData":
             await self._process_session_data(msg, timestamp)
         elif topic == "DriverRaceInfo":
@@ -556,6 +739,7 @@ class ProcessLiveData:
 
 import ast
 import time
+import statistics
 
 starting_pos = [
     16,
@@ -580,10 +764,12 @@ starting_pos = [
     27,
 ]
 
+timings = []
+
 
 async def test():
     Processor = ProcessLiveData()
-    await Processor.start_kafka_producer()
+    await Processor.start()
 
     for i, item in enumerate(starting_pos):
         await Processor._redis.hset(name=str(item), key="Position", value=str(i + 1))
@@ -595,15 +781,20 @@ async def test():
         msg = ast.literal_eval(line)
 
         try:
-            # start = time.time()
+            start = time.time()
             await Processor.process(topic=msg[0], msg=msg[1], timestamp=msg[2])
-            # end = time.time()
+            end = time.time()
+            timings.append((end - start) * 100)
             # print(f"{(end - start)*100:.10f}ms")
         except Exception as e:
             print(f"\nData : {line}\nException : {e}\n")
 
     fileH.close()
-    await Processor.stop_kafka_producer()
+    await Processor.stop()
 
 
 asyncio.run(test())
+
+print(
+    f"Median: {statistics.median(timings):.10f}ms\nMean: {statistics.mean(timings):.10f}ms\nStdDev: {statistics.pstdev(timings)}\n"
+)

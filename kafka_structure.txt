@@ -2,6 +2,8 @@ topic {
     key : value
 }
 
+-----DRIVER SPECIFIC--------
+
 TyreAge {
     driver : CurrentTyreAge
 }
@@ -16,4 +18,71 @@ CurrentLap {
 
 Tyre {
     driver : CurrentTyreType,StintNumber
+}
+
+GapToLeader {
+    driver : +S.mss -> Str
+}
+
+IntervalToPositionAhead {
+    driver : +S.mss -> Str
+}
+
+SectorTime {
+    driver : SectorTime,SectorNumber,LapNumber
+}
+
+Speed {
+    driver : SpeedTrapIdentifier,Speed,LapNumber
+}
+
+InPit {
+    driver : LapNumber
+}
+
+NumberOfPitStops {
+    driver : NumberOfPitStops
+}
+
+PitOut {
+    driver : LapNumber
+}
+
+CarData {
+    driver : CarDataChannelsDict,LapNumber,Timestamp
+}
+
+PositionData {
+    driver : PositionDataDict,LapNumber,Timestamp
+}
+
+Position {
+    driver : CurrentPosition
+}
+
+Retired {
+    driver : true
+}
+
+-----SESSION SPECIFIC--------
+
+TotalLaps {
+    TotalLaps : Int
+}
+
+LapCount {
+    CurrentLap : Int
+}
+
+SessionStatus {
+    StartTime : Timestamp -> Str
+    EndTime : Timestamp -> Str
+}
+
+RCM { # Lap is only present in race sessions
+    Other : UTC,message,lap
+    DRS : UTC,status,lap
+    Flag : UTC,flag,scope,message,lap
+    SafetyCar : UTC,mode,status,message,lap
+    CarEvent : UTC,carNum,message,lap
 }

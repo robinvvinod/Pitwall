@@ -50,14 +50,13 @@ class SignalRClient:
         self._processor = processor
         self.timeout = timeout
         self._connection = None
+        self._tsince_last_message = None
 
         if not logger:
             logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s")
             self.logger = logging.getLogger("SignalR")
         else:
             self.logger = logger
-
-        self._tsince_last_message = None
 
     async def _on_message(self, msg):
         self._tsince_last_message = time.time()
@@ -67,8 +66,7 @@ class SignalRClient:
             self.logger.exception("Exception while processing live data")
 
     async def _run(self):
-        # Start kafka producer
-        await self._processor.start_kafka_producer()
+        await self._processor.start()
 
         # Create connection
         session = requests.Session()
@@ -98,7 +96,7 @@ class SignalRClient:
                     f"than {self.timeout} seconds!"
                 )
                 self._connection.close()
-                self._processor.stop_kafka_producer()
+                await self._processor.stop()
                 return
             await asyncio.sleep(1)
 
