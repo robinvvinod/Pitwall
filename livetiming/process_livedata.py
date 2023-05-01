@@ -4,6 +4,7 @@ import asyncio
 import ujson
 import zlib
 import base64
+import random
 
 
 class ProcessLiveData:
@@ -24,10 +25,38 @@ class ProcessLiveData:
             bootstrap_servers=kafka_url,
             key_serializer=self._serializer,
             value_serializer=self._serializer,
+            partitioner=self._paritioner,
         )
 
         self.sessionStatus = None
         self.retiredDrivers = set()
+
+        driverNums = [
+            16,
+            1,
+            11,
+            55,
+            44,
+            14,
+            4,
+            22,
+            18,
+            81,
+            63,
+            23,
+            77,
+            2,
+            24,
+            20,
+            10,
+            21,
+            31,
+            27,
+        ]
+
+        self.partitionMap = {}
+        for i, item in enumerate(driverNums):
+            self.partitionMap[str(item).encode()] = i
 
     async def start(self):
         await self._redis.flushall()
@@ -48,6 +77,11 @@ class ProcessLiveData:
         if not isinstance(value, str):
             value = str(value)
         return value.encode()
+
+    def _paritioner(self, key_bytes, all_partitions, available_partitions):
+        if key_bytes in self.partitionMap:
+            return self.partitionMap[key_bytes]
+        return random.choice(all_partitions)
 
     async def _process_timing_app_data(self, msg):
         """

@@ -36,7 +36,6 @@ async def consume():
         group_id="my-group",
         key_deserializer=deserializer,
         value_deserializer=deserializer,
-        connections_max_idle_ms=1000
     )
     # Get cluster layout and join group `my-group`
     await consumer.start()
