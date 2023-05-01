@@ -9,9 +9,6 @@ topics = [
     "Heartbeat",
     "CarData.z",
     "Position.z",
-    "ExtrapolatedClock",
-    "TopThree",
-    "RcmSeries",
     "TimingStats",
     "TimingAppData",
     "WeatherData",
@@ -22,6 +19,12 @@ topics = [
     "SessionData",
     "LapCount",
     "TimingData",
+    "CurrentTyres",
+    "TeamRadio",
+    "LapSeries",
+    "SPFeed",
+    "ChampionshipPrediction",
+    "DriverRaceInfo",
 ]
 
 

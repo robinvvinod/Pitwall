@@ -23,6 +23,7 @@ class ProcessLiveData:
         self._kafka = aiokafka.AIOKafkaProducer(bootstrap_servers=kafka_url)
 
         self.sessionStatus = None
+        self.retiredDrivers = set()
 
     async def start_kafka_producer(self):
         await self._kafka.start()
@@ -422,6 +423,26 @@ class ProcessLiveData:
         await asyncio.gather(*tasks)
 
     async def _process_car_data(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../CarData.z.jsonStream
+
+        The following information is present in the file: (Sourced from Fast-F1, 240ms sample rate)
+            - Speed (int): Km/h
+            - RPM (int)
+            - Gear (int): [called 'nGear' in the data!]
+            - Throttle (int): 0-100%
+            - Brake (bool)
+            - DRS (int): 0-14 (Odd DRS is Disabled, Even DRS is Enabled?)
+              (More Research Needed?)
+              - 0 =  Off
+              - 1 =  Off
+              - 2 =  (?)
+              - 3 =  (?)
+              - 8 =  Detected, Eligible once in Activation Zone (Noted Sometimes)
+              - 10 = On (Unknown Distinction)
+              - 12 = On (Unknown Distinction)
+              - 14 = On (Unknown Distinction)
+        """
         # kafka stream uncompressed data
 
         msg = zlib.decompress(base64.b64decode(msg), -zlib.MAX_WBITS).decode()
@@ -434,6 +455,10 @@ class ProcessLiveData:
             data = item["Cars"]
 
             for driver in data:
+                # If driver has retired, we can ignore any car data
+                if driver in self.retiredDrivers:
+                    continue
+
                 curLap = await self._get_current_lap(driver)
 
                 tasks.append(
@@ -447,6 +472,13 @@ class ProcessLiveData:
         await asyncio.gather(*tasks)
 
     async def _process_position_data(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../Position.z.jsonStream
+
+        The following information is present in the file: (Sourced from Fast-F1, 220ms sample rate)
+            - Status (str): 'OnTrack' or 'OffTrack'
+            - X, Y, Z (int): Position coordinates; starting from 2020 the coordinates are given in 1/10 meter
+        """
         # kafka stream uncompressed dat
 
         msg = zlib.decompress(base64.b64decode(msg), -zlib.MAX_WBITS).decode()
@@ -459,6 +491,10 @@ class ProcessLiveData:
             data = item["Entries"]
 
             for driver in data:
+                # If driver has retired, we can ignore any position data
+                if driver in self.retiredDrivers:
+                    continue
+
                 curLap = await self._get_current_lap(driver)
 
                 tasks.append(
@@ -470,6 +506,34 @@ class ProcessLiveData:
                 )
 
         await asyncio.gather(*tasks)
+
+    async def _process_driver_race_info(self, msg):
+        """
+        Processes data from https://livetiming.formula1.com/static/.../DriverRaceInfo.jsonStream
+
+        The following information is present in the file:
+            (1) Overtakes for position during the race
+            (2) If a driver has retired from the race
+        """
+
+        tasks = []
+        for driver in msg:
+            if "OvertakeState" in msg[driver]:
+                if "Position" in msg[driver]:
+                    tasks.append(
+                        self._redis.hset(
+                            name=driver, key="Position", value=msg[driver]["Position"]
+                        )
+                    )
+
+            if "IsOut" in msg[driver]:
+                if msg[driver]["IsOut"] is True:
+                    tasks.append(
+                        self._redis.hset(name=driver, key="Retired", value="true")
+                    )
+                    self.retiredDrivers.add(driver)
+
+        asyncio.gather(*tasks)
 
     async def process(self, topic, msg, timestamp):
         if topic == "CarData.z":
@@ -486,16 +550,45 @@ class ProcessLiveData:
             await self._process_race_control_messages(msg, timestamp)
         elif topic == "SessionData":
             await self._process_session_data(msg, timestamp)
+        elif topic == "DriverRaceInfo":
+            await self._process_driver_race_info(msg)
 
 
 import ast
 import time
 
+starting_pos = [
+    16,
+    1,
+    11,
+    55,
+    44,
+    14,
+    4,
+    22,
+    18,
+    81,
+    63,
+    23,
+    77,
+    2,
+    24,
+    20,
+    10,
+    21,
+    31,
+    27,
+]
+
 
 async def test():
     Processor = ProcessLiveData()
     await Processor.start_kafka_producer()
-    fileH = open("jsonStreams/Qualifying/saved_data.txt", "r")
+
+    for i, item in enumerate(starting_pos):
+        await Processor._redis.hset(name=str(item), key="Position", value=str(i + 1))
+
+    fileH = open("jsonStreams/Race/saved_data.txt", "r")
 
     for line in fileH:
         line = line.strip()

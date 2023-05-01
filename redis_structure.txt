@@ -19,6 +19,8 @@ CarNumber:LapNumber {
 CarNumber {
     CurrentLap : Int
     NumberOfPitstops : Int
+    Position : Int
+    Retired : true
 }
 
 Session {
