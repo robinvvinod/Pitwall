@@ -33,9 +33,11 @@ async def consume():
     consumer = AIOKafkaConsumer(
         *topics,
         bootstrap_servers="localhost:9092",
-        group_id="my-group",
+        group_id=None,
         key_deserializer=deserializer,
         value_deserializer=deserializer,
+        consumer_timeout_ms=2000,
+        auto_offset_reset="earliest"
     )
     # Get cluster layout and join group `my-group`
     await consumer.start()
