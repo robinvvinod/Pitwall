@@ -748,7 +748,10 @@ class ProcessLiveData:
         asyncio.gather(*tasks)
 
     async def process(self, topic, msg, timestamp):
-        if self.sessionStatus != "Started":
+        if self.sessionStatus == "Finished":
+            return
+
+        if self.sessionStatus is None:
             if topic == "SessionData":
                 await self._process_session_data(msg, timestamp)
             return

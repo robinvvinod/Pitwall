@@ -9,25 +9,16 @@ import Foundation
 
 // API Reference: https://docs.confluent.io/platform/current/kafka-rest/api.html
 
-class KafkaConsumer {
-    
+
+
+class KafkaConsumer: DataProcessor  {
+                
     enum consumerError: Error {
         case alreadyExists
         case serverResponseError
         case decodeError
         case unacceptableRequest
-    }
-    
-    func createAndSubscribeConsumer(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for topic in topics {
-                group.addTask {
-                    try await self.createConsumer(url: "\(kafkaURL)/consumers/\(topic)\(consumerGroup)", name: "\(topic)Consumer")
-                    try await self.subscribeConsumer(url:"\(kafkaURL)/consumers/\(topic)\(consumerGroup)/instances/\(topic)Consumer/subscription", topics: ["\(topic)"])
-                }
-            }
-            try await group.waitForAll()
-        }
+        case emptyResponse
     }
     
     private func createConsumer(url: String, name: String) async throws -> () {
@@ -70,7 +61,7 @@ class KafkaConsumer {
         }
     }
 
-    private func consumeRecord(url: String) async throws -> [Any] {
+    private func consumeRecord(url: String) async throws -> [[String:AnyObject]] {
         guard let url = URL(string: url) else {throw URLError(.badURL)}
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "GET"
@@ -87,26 +78,37 @@ class KafkaConsumer {
         }
         
         do {
-            guard let serverResponse = (try JSONSerialization.jsonObject(with: data)) as? [Any] else { return [] } // Array of dicts
+            guard let serverResponse = (try JSONSerialization.jsonObject(with: data)) as? [[String:AnyObject]] else { throw consumerError.emptyResponse }
             return serverResponse
         } catch {
             throw consumerError.decodeError
         }
     }
     
+    func createAndSubscribeConsumer(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for topic in topics {
+                group.addTask(priority: .userInitiated) {
+                    try await self.createConsumer(url: "\(kafkaURL)/consumers/\(topic)\(consumerGroup)", name: "\(topic)Consumer")
+                    try await self.subscribeConsumer(url:"\(kafkaURL)/consumers/\(topic)\(consumerGroup)/instances/\(topic)Consumer/subscription", topics: ["\(topic)"])
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
     
     func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
         while true {
             print("iteration start")
-            try await withThrowingTaskGroup(of: [Any].self) { group in
+            try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {
-                    group.addTask {
+                    group.addTask(priority: .userInitiated) {
                         try await self.consumeRecord(url: "\(kafkaURL)/consumers/\(topic)\(consumerGroup)/instances/\(topic)Consumer/records")
                     }
                 }
 
-                for try await record in group {
-                    print(record)
+                for try await records in group {
+                    try await processRecord(records: records)
                 }
             }
             print("iteration end")

@@ -17,6 +17,7 @@
 		000CFFCA2A0104A700AAF530 /* pitwall_iosUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFC92A0104A700AAF530 /* pitwall_iosUITests.swift */; };
 		000CFFCC2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */; };
 		000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */; };
+		0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0022E7902A03EF170030BB29 /* DataProcessor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +51,7 @@
 		000CFFC92A0104A700AAF530 /* pitwall_iosUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITests.swift; sourceTree = "<group>"; };
 		000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KafkaConsumer.swift; sourceTree = "<group>"; };
+		0022E7902A03EF170030BB29 /* DataProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataProcessor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +105,7 @@
 				000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */,
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
+				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
 				000CFFAD2A0104A700AAF530 /* Assets.xcassets */,
 				000CFFB22A0104A700AAF530 /* Persistence.swift */,
 				000CFFB42A0104A700AAF530 /* pitwall_ios.xcdatamodeld */,
@@ -268,6 +271,7 @@
 			files = (
 				000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */,
 				000CFFB32A0104A700AAF530 /* Persistence.swift in Sources */,
+				0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */,
 				000CFFAC2A0104A600AAF530 /* ContentView.swift in Sources */,
 				000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */,
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,

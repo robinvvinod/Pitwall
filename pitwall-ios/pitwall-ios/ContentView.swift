@@ -6,18 +6,20 @@
 //
 
 import SwiftUI
-import CoreData
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
-    var kafkaURL = "http://localhost:8082"
-    var consumerGroup = "rest_test_53"
-    var topics: [String] = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
+    let kafkaURL = "http://localhost:8082"
+    let consumerGroup = "rest_test_70"
+    let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
 
-    let kafka = KafkaConsumer()
+    @ObservedObject var kafka = KafkaConsumer()
     
     var body: some View {
+        
+        Text("\(kafka.liveDatabase["TyreAge:14"] ?? "0")")
+        
         Button("HTTP") {
             Task {
                 
@@ -35,8 +37,6 @@ struct ContentView: View {
                 } catch {
                     print(error)
                 }
-                
-                
                 
             }
         }
