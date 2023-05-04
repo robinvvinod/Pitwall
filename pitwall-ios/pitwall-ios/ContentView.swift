@@ -11,29 +11,33 @@ import CoreData
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
-    var consumerGroup = "rest_test_32"
-    var consumerID = "swift-test130"
+    var kafkaURL = "http://localhost:8082"
+    var consumerGroup = "rest_test_53"
+    var topics: [String] = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
+
+    let kafka = KafkaConsumer()
     
     var body: some View {
         Button("HTTP") {
             Task {
+                
+                // Create and subscribe consumers. 1 time task
                 do {
-                    try await createConsumer(url: "http://localhost:8082/consumers/\(consumerGroup)", name: consumerID)
+                    try await kafka.createAndSubscribeConsumer(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
+                } catch {
+                    guard error as? KafkaConsumer.consumerError == .alreadyExists else {
+                        return
+                    }
+                }
+                
+                do {
+                    try await kafka.startListening(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
                 } catch {
                     print(error)
                 }
                 
-                do {
-                    try await subscribeConsumer(url: "http://localhost:8082/consumers/\(consumerGroup)/instances/\(consumerID)/subscription", topics: ["TyreAge"])
-                } catch {
-                    print(error)
-                }
-
-                do {
-                    try await consumeRecord(url: "http://localhost:8082/consumers/\(consumerGroup)/instances/\(consumerID)/records", topic: "Position")
-                } catch {
-                    print(error)
-                }
+                
+                
             }
         }
     }
