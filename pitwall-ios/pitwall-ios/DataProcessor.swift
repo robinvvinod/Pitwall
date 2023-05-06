@@ -35,7 +35,7 @@ class DataProcessor: DataObject {
                     if carSpecific.contains(topic) {
                         addCarSpecificData(topic: topic, driver: key, value: value)
                     } else if sessionSpecific.contains(topic) {
-                        return
+                        addSessionSpecificData(topic: topic, key: key, value: value)
                     } else {
                         addLapSpecificData(topic: topic, driver: key, value: value)
                     }

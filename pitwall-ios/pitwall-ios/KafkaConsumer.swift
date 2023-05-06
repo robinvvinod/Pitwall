@@ -27,7 +27,7 @@ class KafkaConsumer: DataProcessor  {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/vnd.kafka.v2+json", forHTTPHeaderField: "Content-Type")
         
-        let json: [String: String] = ["name": name, "format": "binary", "auto.offset.reset": "earliest", "consumer.request.timeout.ms": "150"]
+        let json: [String: String] = ["name": name, "format": "binary", "auto.offset.reset": "earliest", "consumer.request.timeout.ms": "200"]
         let jsonData = try? JSONSerialization.data(withJSONObject: json)
         
         urlRequest.httpBody = jsonData
@@ -98,7 +98,7 @@ class KafkaConsumer: DataProcessor  {
     }
     
     func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
-        while true {
+        while sessionDatabase.EndTime == "" {
             print("iteration start")
             try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {

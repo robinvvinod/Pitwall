@@ -21,16 +21,17 @@ class Driver {
     var Position = "0"
     var Retired = "false"
     var laps: [String:[String:String]] = [:]
+    var GapToLeader: [String:[String]] = [:]
+    var IntervalToPositionAhead: [String:[String]] = [:]
     var CarData: [String:[String]] = [:]
     var PositionData: [String:[String]] = [:]
 }
 
 class Session {
-    let id = UUID()
     var CurrentLap = "0"
     var TotalLaps = "0"
-    var StartTime = "0"
-    var EndTime = "0"
+    var StartTime = ""
+    var EndTime = ""
     var RCM: [String] = []
 }
 
@@ -87,7 +88,6 @@ class DataObject: ObservableObject {
     func addLapSpecificData(topic: String, driver: String, value: String) -> () {
         let driverObject = driverDatabase[driver]
         guard let driverObject = driverObject else {return}
-        let curLap = driverObject.CurrentLap
         
         let timestamp = value.components(separatedBy: "::")[1]
         
@@ -105,6 +105,18 @@ class DataObject: ObservableObject {
                 return
             }
             
+        } else if (topic == "GapToLeader") || (topic == "IntervalToPositionAhead") {
+            
+            let value = value.components(separatedBy: ",")
+            
+            switch topic {
+            case "GapToLeader":
+                driverObject.GapToLeader[value[1], default: []].append(value[0] + "::\(timestamp)")
+            case "IntervalToPositionAhead":
+                driverObject.IntervalToPositionAhead[value[1], default: []].append(value[0] + "::\(timestamp)")
+            default:
+                return
+            }
             
         } else {
             
@@ -133,9 +145,7 @@ class DataObject: ObservableObject {
                 driverObject.laps[value[0], default: [:]]["PitIn"] = "true" + "::\(timestamp)"
             default:
                 return
-            }
-            
-            print(driverObject.laps)
+            }            
         }
     }
 }
