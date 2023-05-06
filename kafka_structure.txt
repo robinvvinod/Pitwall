@@ -1,31 +1,45 @@
 topic {
-    key : value
+    key : value::Timestamp
 }
 
------DRIVER SPECIFIC--------
+-----DRIVER SPECIFIC-----
+
+CurrentLap {
+    driver : CurrentLap
+}
+
+NumberOfPitStops {
+    driver : NumberOfPitStops
+}
+
+Position {
+    driver : CurrentPosition
+}
+
+Retired {
+    driver : true
+}
+
+-----LAP SPECIFIC--------
 
 TyreAge {
-    driver : CurrentTyreAge
+    driver : CurrentTyreAge,StintNumer,LapNumber
 }
 
 LapTime {
     driver : LapTime,LapNumber
 }
 
-CurrentLap {
-    driver : CurrentLap
-}
-
 Tyre {
-    driver : CurrentTyreType,StintNumber
+    driver : CurrentTyreType,StintNumber,LapNumber
 }
 
 GapToLeader {
-    driver : +S.mss -> Str
+    driver : +S.mss,LapNumber
 }
 
 IntervalToPositionAhead {
-    driver : +S.mss -> Str
+    driver : +S.mss,LapNumber
 }
 
 SectorTime {
@@ -36,12 +50,8 @@ Speed {
     driver : SpeedTrapIdentifier,Speed,LapNumber
 }
 
-InPit {
+PitIn {
     driver : LapNumber
-}
-
-NumberOfPitStops {
-    driver : NumberOfPitStops
 }
 
 PitOut {
@@ -49,19 +59,11 @@ PitOut {
 }
 
 CarData {
-    driver : CarDataChannelsDict,LapNumber,Timestamp
+    driver : CarDataChannelsDict;;LapNumber
 }
 
 PositionData {
-    driver : PositionDataDict,LapNumber,Timestamp
-}
-
-Position {
-    driver : CurrentPosition
-}
-
-Retired {
-    driver : true
+    driver : PositionDataDict;;LapNumber
 }
 
 -----SESSION SPECIFIC--------
@@ -75,14 +77,14 @@ LapCount {
 }
 
 SessionStatus {
-    StartTime : Timestamp -> Str
-    EndTime : Timestamp -> Str
+    StartTime : Timestamp 
+    EndTime : Timestamp
 }
 
-RCM { # Lap is only present in race sessions
-    Other : UTC,message,lap
-    DRS : UTC,status,lap
-    Flag : UTC,flag,scope,message,lap
-    SafetyCar : UTC,mode,status,message,lap
-    CarEvent : UTC,carNum,message,lap
+RCM { 
+    Other : message
+    DRS : status
+    Flag : flag,scope,message
+    SafetyCar : mode,status,message
+    CarEvent : carNum,message
 }

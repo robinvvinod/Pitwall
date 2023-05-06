@@ -18,10 +18,10 @@ extension String {
     }
 }
 
-class DataProcessor: ObservableObject {
+class DataProcessor: DataObject {
     
-    @Published var liveDatabase: [String:String] = [:]
-    @Published var cacheDatabase: [String:Any] = [:]
+    let carSpecific = ["CurrentLap", "NumberOfPitStops", "Position", "Retired"]
+    let sessionSpecific = ["LapCount", "SessionStatus", "TotalLaps", "RCM"]
         
     func processRecord(records: [[String:AnyObject]]) async throws -> () {
         for record in records {
@@ -31,8 +31,15 @@ class DataProcessor: ObservableObject {
             
             if let topic = topic, let key = key, let value = value {
                 await MainActor.run(body: {
-                    liveDatabase["\(topic):\(key)"] = value
-                    print(liveDatabase)
+                    
+                    if carSpecific.contains(topic) {
+                        addCarSpecificData(topic: topic, driver: key, value: value)
+                    } else if sessionSpecific.contains(topic) {
+                        return
+                    } else {
+                        addLapSpecificData(topic: topic, driver: key, value: value)
+                    }
+                   
                 })
             } else {return}
         }

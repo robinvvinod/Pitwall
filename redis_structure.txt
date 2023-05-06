@@ -1,7 +1,22 @@
 hash {
-  key: value
+  key: value::Timestamp
 }
 
+CarNumber:LapNumber:GapToLeader {
+    Timestamp : GapToLeader
+}
+
+CarNumber:LapNumber:IntervalToPositionAhead {
+    Timestamp : IntervalToPositionAhead
+}
+
+CarNumber:LapNumber:CarData {
+    Timestamp : CarData
+}
+
+CarNumber:LapNumber:PositionData {
+    Timestamp : PositionData
+}
 
 CarNumber:LapNumber {
     StintNumber : Int
@@ -30,11 +45,10 @@ Session {
     EndTime : Timestamp
 }
 
-# lap attribute is kept to the last since it is optional. Practice & Quali sessions do not have laps associated with RCMs
 RaceControlMessages {
-    MessageNum : Str (Other,Utc,Message,Lap)
-    MessageNum : Str (Drs,Utc,Status,Lap)
-    MessageNum : Str (SafetyCar,Utc,Mode,Status,Message,Lap)
-    MessageNum : Str (CarEvent,Utc,RacingNumber,Message,Lap)
-    MessageNum : Str (Flag,Utc,FlagType,Scope,Message,Lap)
+    MessageNum : Str (Other,Utc,Message)
+    MessageNum : Str (Drs,Utc,Status,)
+    MessageNum : Str (SafetyCar,Utc,Mode,Status,Message)
+    MessageNum : Str (CarEvent,Utc,RacingNumber,Message)
+    MessageNum : Str (Flag,Utc,FlagType,Scope,Message)
 }
