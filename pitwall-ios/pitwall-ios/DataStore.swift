@@ -35,7 +35,7 @@ class Session {
     var RCM: [String] = []
 }
 
-class DataObject: ObservableObject {
+class DataStore: ObservableObject {
     
     @Published var driverDatabase: [String:Driver] = [:]
     @Published var sessionDatabase: Session = Session()
@@ -98,7 +98,6 @@ class DataObject: ObservableObject {
             switch topic {
             case "CarData":
                 driverObject.CarData[value[1], default: []].append(value[0] + "::\(timestamp)")
-                
             case "PositionData":
                 driverObject.PositionData[value[1], default: []].append(value[0] + "::\(timestamp)")
             default:

@@ -220,40 +220,43 @@ class ProcessLiveData:
         # msg may contain information for more than 1 driver, where driver no. is the key
         for driver in msg:
             if "GapToLeader" in msg[driver]:
-                curLap = await self._get_current_lap(driver)
-                tasks.append(
-                    self._redis.hset(
-                        name=f"{driver}:{curLap}:GapToLeader",
-                        key=timestamp,
-                        value=f'{msg[driver]["GapToLeader"]}',
+                # Live data sometimes has wrong data under GapToLeader
+                if "+" in msg[driver]["GapToLeader"]:
+                    curLap = await self._get_current_lap(driver)
+                    tasks.append(
+                        self._redis.hset(
+                            name=f"{driver}:{curLap}:GapToLeader",
+                            key=timestamp,
+                            value=f'{msg[driver]["GapToLeader"]}',
+                        )
                     )
-                )
 
-                tasks.append(
-                    self._kafka.send(
-                        topic="GapToLeader",
-                        key=driver,
-                        value=f'{msg[driver]["GapToLeader"]},{curLap}::{timestamp}',
+                    tasks.append(
+                        self._kafka.send(
+                            topic="GapToLeader",
+                            key=driver,
+                            value=f'{msg[driver]["GapToLeader"]},{curLap}::{timestamp}',
+                        )
                     )
-                )
 
             if "IntervalToPositionAhead" in msg[driver]:
-                curLap = await self._get_current_lap(driver)
-                tasks.append(
-                    self._redis.hset(
-                        name=f"{driver}:{curLap}:IntervalToPositionAhead",
-                        key=timestamp,
-                        value=f'{msg[driver]["IntervalToPositionAhead"]}',
+                if "+" in msg[driver]["IntervalToPositionAhead"]["Value"]:
+                    curLap = await self._get_current_lap(driver)
+                    tasks.append(
+                        self._redis.hset(
+                            name=f"{driver}:{curLap}:IntervalToPositionAhead",
+                            key=timestamp,
+                            value=f'{msg[driver]["IntervalToPositionAhead"]["Value"]}',
+                        )
                     )
-                )
 
-                tasks.append(
-                    self._kafka.send(
-                        topic="IntervalToPositionAhead",
-                        key=driver,
-                        value=f'{msg[driver]["IntervalToPositionAhead"]},{curLap}::{timestamp}',
+                    tasks.append(
+                        self._kafka.send(
+                            topic="IntervalToPositionAhead",
+                            key=driver,
+                            value=f'{msg[driver]["IntervalToPositionAhead"]["Value"]},{curLap}::{timestamp}',
+                        )
                     )
-                )
 
             if ("Sectors" in msg[driver]) and (
                 isinstance(msg[driver]["Sectors"], dict)

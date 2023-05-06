@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://localhost:8082"
-    let consumerGroup = "rest_test_97"
+    let consumerGroup = "rest_test_115"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
     @ObservedObject var kafka = KafkaConsumer()
@@ -19,10 +19,8 @@ struct ContentView: View {
     var body: some View {
         VStack {
                         
-            Button("START") {
-                Task {
-                    
-                    // Create and subscribe consumers. 1 time task
+            Button("Connect to Kafka") {
+                Task(priority: .userInitiated) { // Starts Kafka consumer
                     do {
                         try await kafka.createAndSubscribeConsumer(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
                     } catch {
@@ -36,7 +34,11 @@ struct ContentView: View {
                     } catch {
                         print(error)
                     }
-                    
+                }
+                
+                Task(priority: .userInitiated) { // Starts processing of messages in queue
+                    try await Task.sleep(for: .seconds(30))
+                    await kafka.processQueue(startPoint: 0)
                 }
             }
         }

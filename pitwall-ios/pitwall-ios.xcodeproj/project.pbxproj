@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		000819692A05444100F729F2 /* DataObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000819682A05444100F729F2 /* DataObject.swift */; };
+		000819692A05444100F729F2 /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000819682A05444100F729F2 /* DataStore.swift */; };
 		000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */; };
 		000CFFAC2A0104A600AAF530 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFAB2A0104A600AAF530 /* ContentView.swift */; };
 		000CFFAE2A0104A700AAF530 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000CFFAD2A0104A700AAF530 /* Assets.xcassets */; };
@@ -39,7 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		000819682A05444100F729F2 /* DataObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataObject.swift; sourceTree = "<group>"; };
+		000819682A05444100F729F2 /* DataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStore.swift; sourceTree = "<group>"; };
 		000CFFA62A0104A600AAF530 /* pitwall-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "pitwall-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosApp.swift; sourceTree = "<group>"; };
 		000CFFAB2A0104A600AAF530 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -108,7 +108,7 @@
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
-				000819682A05444100F729F2 /* DataObject.swift */,
+				000819682A05444100F729F2 /* DataStore.swift */,
 				000CFFAD2A0104A700AAF530 /* Assets.xcassets */,
 				000CFFB22A0104A700AAF530 /* Persistence.swift */,
 				000CFFB42A0104A700AAF530 /* pitwall_ios.xcdatamodeld */,
@@ -274,7 +274,7 @@
 			files = (
 				000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */,
 				000CFFB32A0104A700AAF530 /* Persistence.swift in Sources */,
-				000819692A05444100F729F2 /* DataObject.swift in Sources */,
+				000819692A05444100F729F2 /* DataStore.swift in Sources */,
 				0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */,
 				000CFFAC2A0104A600AAF530 /* ContentView.swift in Sources */,
 				000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */,

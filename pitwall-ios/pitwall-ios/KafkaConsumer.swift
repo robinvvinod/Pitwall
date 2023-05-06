@@ -9,8 +9,6 @@ import Foundation
 
 // API Reference: https://docs.confluent.io/platform/current/kafka-rest/api.html
 
-
-
 class KafkaConsumer: DataProcessor  {
                 
     enum consumerError: Error {
@@ -108,7 +106,7 @@ class KafkaConsumer: DataProcessor  {
                 }
 
                 for try await records in group {
-                    try await processRecord(records: records)
+                    try await addtoQueue(records: records)
                 }
             }
             print("iteration end")
