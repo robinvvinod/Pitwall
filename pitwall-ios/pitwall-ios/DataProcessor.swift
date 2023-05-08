@@ -108,6 +108,7 @@ class DataProcessor: DataStore {
                             return
                         }
                     }
+                    dataQueue.remove(at: count)
                     count += 1
                 } else {
                     if sessionDatabase.EndTime != "" {
