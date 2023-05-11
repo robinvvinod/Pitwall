@@ -10,7 +10,7 @@ import Foundation
 // API Reference: https://docs.confluent.io/platform/current/kafka-rest/api.html
 
 class KafkaConsumer: DataProcessor  {
-                
+    
     enum consumerError: Error {
         case alreadyExists
         case serverResponseError
@@ -18,7 +18,7 @@ class KafkaConsumer: DataProcessor  {
         case unacceptableRequest
         case emptyResponse
     }
-    
+        
     private func createConsumer(url: String, name: String) async throws -> () {
         guard let url = URL(string: url) else {return}
         var urlRequest = URLRequest(url: url)
@@ -96,7 +96,8 @@ class KafkaConsumer: DataProcessor  {
     }
     
     func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
-        while sessionDatabase.EndTime == "" {
+        // TODO: Implement timeout to stop listening for new messages
+        while true {
             print("iteration start")
             try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {

@@ -11,15 +11,16 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://localhost:8082"
-    let consumerGroup = "rest_test_120"
+    let consumerGroup = "rest_test_163"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
-    @ObservedObject var kafka = KafkaConsumer()
+    @StateObject var kafka = KafkaConsumer()
     
     var body: some View {
         VStack {
                
-            sessionInfoView
+            //sessionInfoView
+            leaderboardView
             
             Button("Connect to Kafka") {
                 Task(priority: .userInitiated) { // Starts Kafka consumer
@@ -47,7 +48,7 @@ struct ContentView: View {
                      
                      If joining with a delay, make sure startPoint of processQueue is >= the kafka data already downloaded
                      */
-                    try await Task.sleep(for:.seconds(15))
+                    try await Task.sleep(for: .seconds(15))
                     await kafka.processQueue(startPoint: 0)
                 }
             }
@@ -69,7 +70,7 @@ struct ContentView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.gray).opacity(0.2)
-                        .frame(width: .infinity, height: 150)
+                        .frame(height: 150)
                         .padding()
                     
                 }
@@ -81,9 +82,11 @@ struct ContentView: View {
                             .font(.headline)
                             .fontWeight(.heavy)
                             .padding(.bottom, 3)
+                            .fixedSize(horizontal: false, vertical: true)
                         
                         Text("Miami International Autodrome")
                             .padding(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     
                     Spacer()
@@ -98,13 +101,16 @@ struct ContentView: View {
                             .padding(.top)
                             .padding(.bottom, 3)
                             .fontWeight(.heavy)
+                            .fixedSize(horizontal: false, vertical: true)
                         
                         Text("05 - 07 May")
                             .padding(.bottom, 3)
+                            .fixedSize(horizontal: false, vertical: true)
                         
                         Text("Sprint Shootout")
                             .padding(.bottom)
                             .font(.headline)
+                            .fixedSize(horizontal: false, vertical: true)
                         
                     }.padding(.leading)
                     
@@ -112,14 +118,14 @@ struct ContentView: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color.green)
-                            .frame(width: 175, height: 50)
                         HStack {
                             Spacer()
                             Text("LAP")
                                 .font(.title2)
                                 .padding(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                             Spacer()
-                            Text("15 / 57")
+                            Text("\(kafka.sessionDatabase.CurrentLap) / 57")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .padding(.trailing)
@@ -135,13 +141,39 @@ struct ContentView: View {
             }
             
         }
-            .frame(width: .infinity, height: 325, alignment: .top)
+            .fixedSize(horizontal: false, vertical: true)
             .padding()
             
         
     }
     
+    var headersArray = ["Car Number", "Lap Time", "Gap", "Int"]
     
+    var leaderboardView: some View {
+                        
+        ScrollView(.horizontal) {
+            
+            HStack(alignment: .top) {
+                ForEach(headersArray, id: \.self) { item in
+                    VStack {
+                        Text("\(item)")
+                        ForEach(kafka.driverList, id: \.self) { key in
+                            HStack {
+                                switch item {
+                                case "Car Number":
+                                    Text(key)
+                                case "Lap Time":
+                                    Text("\(kafka.driverDatabase[key]!.LapTime)")
+                                default:
+                                    Text("")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }.padding()
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {

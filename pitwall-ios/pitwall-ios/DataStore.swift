@@ -7,40 +7,12 @@
 
 import Foundation
 
-class Driver {
-    
-    let id = UUID()
-    let racingNum: String
-    
-    init(racingNum: String) {
-        self.racingNum = racingNum
-    }
-    
-    var CurrentLap = "0"
-    var NumberOfPitStops = "0"
-    var Position = "0"
-    var Retired = "false"
-    var laps: [String:[String:String]] = [:]
-    var GapToLeader: [String:[String]] = [:]
-    var IntervalToPositionAhead: [String:[String]] = [:]
-    var CarData: [String:[String]] = [:]
-    var PositionData: [String:[String]] = [:]
-}
-
-class Session {
-    var CurrentLap = "0"
-    var TotalLaps = "0"
-    var StartTime = ""
-    var EndTime = ""
-    var RCM: [String] = []
-}
-
 class DataStore: ObservableObject {
     
     @Published var driverDatabase: [String:Driver] = [:]
     @Published var sessionDatabase: Session = Session()
     
-    let driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"]
+    var driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"] // Sorted according to position of driver
     
     init() {
         for driver in driverList {
@@ -70,6 +42,8 @@ class DataStore: ObservableObject {
     func addCarSpecificData(topic: String, driver: String, value: String) -> () {
         let driverObject = driverDatabase[driver]
         guard let driverObject = driverObject else {return}
+        
+        let value = value.components(separatedBy: "::")[0]
 
         switch topic {
         case "CurrentLap":
@@ -77,7 +51,9 @@ class DataStore: ObservableObject {
         case "NumberOfPitStops":
             driverObject.NumberOfPitStops = value
         case "Position":
-            driverObject.Position = value
+            driverObject.Position.append(Int(value) ?? 0)
+            driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
+            driverList.insert(driverObject.racingNum, at: (Int(value) ?? 0) - 1)
         case "Retired":
             driverObject.Retired = value
         default:
@@ -97,9 +73,9 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "CarData":
-                driverObject.CarData[value[1], default: []].append(value[0] + "::\(timestamp)")
+                driverObject.laps[value[1], default: Lap()].CarData.append(value[0] + "::\(timestamp)")
             case "PositionData":
-                driverObject.PositionData[value[1], default: []].append(value[0] + "::\(timestamp)")
+                driverObject.laps[value[1], default: Lap()].PositionData.append(value[0] + "::\(timestamp)")
             default:
                 return
             }
@@ -110,9 +86,9 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "GapToLeader":
-                driverObject.GapToLeader[value[1], default: []].append(value[0] + "::\(timestamp)")
+                driverObject.laps[value[1], default: Lap()].GapToLeader.append(value[0] + "::\(timestamp)")
             case "IntervalToPositionAhead":
-                driverObject.IntervalToPositionAhead[value[1], default: []].append(value[0] + "::\(timestamp)")
+                driverObject.laps[value[1], default: Lap()].IntervalToPositionAhead.append(value[0] + "::\(timestamp)")
             default:
                 return
             }
@@ -123,25 +99,58 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "TyreAge":
-                driverObject.laps[value[2], default: [:]]["TyreAge"] = value[0] + "::\(timestamp)"
-                driverObject.laps[value[2], default: [:]]["StintNumber"] = value[1] + "::\(timestamp)"
+                driverObject.laps[value[2], default: Lap()].TyreAge = value[0] + "::\(timestamp)"
+                driverObject.TyreAge = Int(value[0]) ?? 0
+                driverObject.laps[value[2], default: Lap()].StintNumber = value[1] + "::\(timestamp)"
+                driverObject.StintNumber = Int(value[1]) ?? 0
+                
             case "LapTime":
-                driverObject.laps[value[1], default: [:]]["LapTime"] = value[0] + "::\(timestamp)"
+                driverObject.laps[value[1], default: Lap()].LapTime = value[0] + "::\(timestamp)"
+                driverObject.LapTime = value[0]
+                
             case "Tyre":
-                driverObject.laps[value[2], default: [:]]["TyreType"] = value[0] + "::\(timestamp)"
-                driverObject.laps[value[2], default: [:]]["StintNumber"] = value[1] + "::\(timestamp)"
-            case "GapToLeader":
-                driverObject.laps[value[1], default: [:]]["GapToLeader"] = value[0] + "::\(timestamp)"
-            case "IntervalToPositionAhead":
-                driverObject.laps[value[1], default: [:]]["IntervalToPositionAhead"] = value[0] + "::\(timestamp)"
+                driverObject.laps[value[2], default: Lap()].TyreType = value[0] + "::\(timestamp)"
+                driverObject.TyreType = value[0]
+                driverObject.laps[value[2], default: Lap()].StintNumber = value[1] + "::\(timestamp)"
+                driverObject.StintNumber = Int(value[1]) ?? 0
+                
             case "SectorTime":
-                driverObject.laps[value[2], default: [:]]["Sector\(value[1])Time"] = value[0] + "::\(timestamp)"
+                if value[1] == "1" {
+                    driverObject.laps[value[2], default: Lap()].Sector1Time = value[0] + "::\(timestamp)"
+                    driverObject.Sector1Time = value[0]
+                } else if value[1] == "2" {
+                    driverObject.laps[value[2], default: Lap()].Sector2Time = value[0] + "::\(timestamp)"
+                    driverObject.Sector2Time = value[0]
+                } else if value[1] == "3" {
+                    driverObject.laps[value[2], default: Lap()].Sector3Time = value[0] + "::\(timestamp)"
+                    driverObject.Sector3Time = value[0]
+                }
+                
             case "Speed":
-                driverObject.laps[value[2], default: [:]][value[0]] = value[1] + "::\(timestamp)"
+                if value[0] == "Sector1SpeedTrap" {
+                    driverObject.laps[value[2], default: Lap()].Sector1SpeedTrap = value[1] + "::\(timestamp)"
+                    driverObject.Sector1SpeedTrap = Float(value[1]) ?? 0
+                } else if value[0] == "Sector2SpeedTrap" {
+                    driverObject.laps[value[2], default: Lap()].Sector2SpeedTrap = value[1] + "::\(timestamp)"
+                    driverObject.Sector2SpeedTrap = Float(value[1]) ?? 0
+                } else if value[0] == "FinishLineSpeedTrap" {
+                    driverObject.laps[value[2], default: Lap()].FinishLineSpeedTrap = value[1] + "::\(timestamp)"
+                    driverObject.FinishLineSpeedTrap = Float(value[1]) ?? 0
+                } else if value[0] == "BackStraightSpeedTrap" {
+                    driverObject.laps[value[2], default: Lap()].BackStraightSpeedTrap = value[1] + "::\(timestamp)"
+                    driverObject.BackStraightSpeedTrap = Float(value[1]) ?? 0
+                }
+                
             case "PitIn":
-                driverObject.laps[value[0], default: [:]]["PitIn"] = "true" + "::\(timestamp)"
+                driverObject.laps[value[0], default: Lap()].PitIn = "true" + "::\(timestamp)"
+                driverObject.PitIn = true
+                driverObject.PitOut = false
+                
             case "PitOut":
-                driverObject.laps[value[0], default: [:]]["PitIn"] = "true" + "::\(timestamp)"
+                driverObject.laps[value[0], default: Lap()].PitOut = "true" + "::\(timestamp)"
+                driverObject.PitOut = true
+                driverObject.PitIn = false
+                
             default:
                 return
             }            

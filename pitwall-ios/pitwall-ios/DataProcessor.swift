@@ -70,17 +70,15 @@ class DataProcessor: DataStore {
             
             if let topic = topic, let key = key, let value = value {
                 guard let timestamp = Double(value.components(separatedBy: "::").last ?? "0") else {return}
-                if topic == "SessionStatus" && key == "EndTime" {
-                    sessionDatabase.EndTime = String(timestamp)
-                    print("SESSION ENDED")
-                }
-                dataQueue.insertSorted(newItem: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
+                //dataQueue.insertSorted(newItem: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
+                dataQueue.append(SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
             } else {return}
         }
     }
     
     func processQueue(startPoint: Int) async -> () {
         var count = startPoint
+        dataQueue.sort{ $0 < $1 }
         while true {
             if !dataQueue.isEmpty {
                 let startTime = DispatchTime.now().rawValue
@@ -102,13 +100,13 @@ class DataProcessor: DataStore {
                     let delay = ((dataQueue[count + 1].timestamp - dataQueue[count].timestamp) * Double(NSEC_PER_SEC)) - Double(processingDelay)
                     if delay > 0 {
                         do {
-                            try await Task.sleep(nanoseconds: UInt64(delay))
+                            //try await Task.sleep(nanoseconds: UInt64(delay))
                         }
                         catch {
                             return
                         }
                     }
-                    dataQueue.remove(at: count)
+                    //dataQueue.remove(at: count)
                     count += 1
                 } else {
                     if sessionDatabase.EndTime != "" {
