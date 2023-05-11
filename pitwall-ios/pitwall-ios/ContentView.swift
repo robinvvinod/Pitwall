@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://localhost:8082"
-    let consumerGroup = "rest_test_163"
+    let consumerGroup = "rest_test_165"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
     @StateObject var kafka = KafkaConsumer()
@@ -147,32 +147,103 @@ struct ContentView: View {
         
     }
     
-    var headersArray = ["Car Number", "Lap Time", "Gap", "Int"]
+    var headersArray = ["Car Number", "Lap Time", "Gap", "Int", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3", "Pit", "Stops", "Lap"]
     
     var leaderboardView: some View {
                         
-        ScrollView(.horizontal) {
-            
-            HStack(alignment: .top) {
-                ForEach(headersArray, id: \.self) { item in
-                    VStack {
-                        Text("\(item)")
-                        ForEach(kafka.driverList, id: \.self) { key in
-                            HStack {
-                                switch item {
-                                case "Car Number":
-                                    Text(key)
-                                case "Lap Time":
-                                    Text("\(kafka.driverDatabase[key]!.LapTime)")
-                                default:
-                                    Text("")
+        ScrollView(.vertical, showsIndicators: true) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(0..<headersArray.count, id: \.self) { i in
+                        VStack(spacing: 0) {
+                            Text("\(headersArray[i])")
+                                .padding(8)
+                            ForEach(0..<kafka.driverList.count, id: \.self) { j in
+                                let key = kafka.driverList[j]
+                                HStack(spacing: 0) {
+                                    switch headersArray[i] {
+                                    case "Car Number":
+                                        Text(key)
+                                            .foregroundColor(Color.white)
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Lap Time":
+                                        Text("\(kafka.driverDatabase[key]!.LapTime)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Gap":
+                                        Text("\(kafka.driverDatabase[key]!.GapToLeader)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Int":
+                                        Text("\(kafka.driverDatabase[key]!.IntervalToPositionAhead)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Tyre":
+                                        Text("\(kafka.driverDatabase[key]!.TyreAge) ")
+                                            .padding(.vertical, 8)
+                                            .padding(.leading, 8)
+                                            .foregroundColor(Color.white)
+                                        Text("\(kafka.driverDatabase[key]!.TyreType)")
+                                            .padding(.vertical, 8)
+                                            .padding(.trailing, 8)
+                                            .foregroundColor(Color.white)
+                                    case "Sector 1":
+                                        Text("\(kafka.driverDatabase[key]!.Sector1Time)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Sector 2":
+                                        Text("\(kafka.driverDatabase[key]!.Sector2Time)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Sector 3":
+                                        Text("\(kafka.driverDatabase[key]!.Sector3Time)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "ST1":
+                                        Text("\(kafka.driverDatabase[key]!.Sector1SpeedTrap)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "ST2":
+                                        Text("\(kafka.driverDatabase[key]!.Sector2SpeedTrap)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "ST3":
+                                        Text("\(kafka.driverDatabase[key]!.FinishLineSpeedTrap)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Pit":
+                                        if kafka.driverDatabase[key]!.PitIn == false && kafka.driverDatabase[key]!.PitOut == true {
+                                            Text("-")
+                                                .padding(8)
+                                                .foregroundColor(Color.white)
+                                        } else {
+                                            Text("IN")
+                                                .padding(8)
+                                                .foregroundColor(Color.white)
+                                                .background(Color.green)
+                                        }
+                                    case "Stops":
+                                        Text("\(kafka.driverDatabase[key]!.NumberOfPitStops)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    case "Lap":
+                                        Text("\(kafka.driverDatabase[key]!.CurrentLap)")
+                                            .padding(8)
+                                            .foregroundColor(Color.white)
+                                    default:
+                                        Text("")
+                                    }
                                 }
+                                    .frame(maxWidth: .infinity)
+                                    .background(j % 2 == 0 ? Color.gray : Color.black)
                             }
                         }
                     }
                 }
-            }
-        }.padding()
+            }.padding()
+        }.padding(.top, 1)
     }
 }
 

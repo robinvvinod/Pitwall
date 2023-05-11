@@ -19,7 +19,6 @@ class Lap {
     
     // Set once per lap
     var LapTime: String = ""
-    var StintNumber: String = ""
     var TyreAge: String = ""
     var TyreType: String = ""
     var Sector1Time: String = ""
@@ -47,17 +46,16 @@ class Driver {
     var Retired = "false"
     var laps: [String:Lap] = [:]
     
-    var GapToLeader: String = ""
-    var IntervalToPositionAhead: String = ""
+    var GapToLeader: String = "-"
+    var IntervalToPositionAhead: String = "-"
     var CarData: String = ""
     var PositionData: String = ""
-    var LapTime: String = ""
-    var StintNumber: Int = 0
+    var LapTime: String = "???"
     var TyreAge: Int = 0
-    var TyreType: String = ""
-    var Sector1Time: String = ""
-    var Sector2Time: String = ""
-    var Sector3Time: String = ""
+    var TyreType: String = "???"
+    var Sector1Time: String = "???"
+    var Sector2Time: String = "???"
+    var Sector3Time: String = "???"
     var PitIn: Bool = false
     var PitOut: Bool = false
     var Sector1SpeedTrap: Float = 0

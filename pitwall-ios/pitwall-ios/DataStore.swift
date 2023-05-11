@@ -87,8 +87,10 @@ class DataStore: ObservableObject {
             switch topic {
             case "GapToLeader":
                 driverObject.laps[value[1], default: Lap()].GapToLeader.append(value[0] + "::\(timestamp)")
+                driverObject.GapToLeader = value[0]
             case "IntervalToPositionAhead":
                 driverObject.laps[value[1], default: Lap()].IntervalToPositionAhead.append(value[0] + "::\(timestamp)")
+                driverObject.IntervalToPositionAhead = value[0]
             default:
                 return
             }
@@ -101,8 +103,6 @@ class DataStore: ObservableObject {
             case "TyreAge":
                 driverObject.laps[value[2], default: Lap()].TyreAge = value[0] + "::\(timestamp)"
                 driverObject.TyreAge = Int(value[0]) ?? 0
-                driverObject.laps[value[2], default: Lap()].StintNumber = value[1] + "::\(timestamp)"
-                driverObject.StintNumber = Int(value[1]) ?? 0
                 
             case "LapTime":
                 driverObject.laps[value[1], default: Lap()].LapTime = value[0] + "::\(timestamp)"
@@ -111,8 +111,6 @@ class DataStore: ObservableObject {
             case "Tyre":
                 driverObject.laps[value[2], default: Lap()].TyreType = value[0] + "::\(timestamp)"
                 driverObject.TyreType = value[0]
-                driverObject.laps[value[2], default: Lap()].StintNumber = value[1] + "::\(timestamp)"
-                driverObject.StintNumber = Int(value[1]) ?? 0
                 
             case "SectorTime":
                 if value[1] == "1" {
