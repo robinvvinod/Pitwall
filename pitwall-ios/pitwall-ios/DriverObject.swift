@@ -48,14 +48,19 @@ class Driver {
     
     var GapToLeader: String = "-"
     var IntervalToPositionAhead: String = "-"
-    var CarData: String = ""
+    var Speed: Int = 0
+    var RPM: Int = 0
+    var Gear: Int = 0
+    var Throttle: Int = 0
+    var Brake: Int = 0
+    var DRS: Int = 0
     var PositionData: String = ""
-    var LapTime: String = "???"
+    var LapTime: String = "-"
     var TyreAge: Int = 0
-    var TyreType: String = "???"
-    var Sector1Time: String = "???"
-    var Sector2Time: String = "???"
-    var Sector3Time: String = "???"
+    var TyreType: String = "-"
+    var Sector1Time: String = "-"
+    var Sector2Time: String = "-"
+    var Sector3Time: String = "-"
     var PitIn: Bool = false
     var PitOut: Bool = false
     var Sector1SpeedTrap: Float = 0

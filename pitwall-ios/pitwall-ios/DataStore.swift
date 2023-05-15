@@ -9,8 +9,8 @@ import Foundation
 
 class DataStore: ObservableObject {
     
-    @Published var driverDatabase: [String:Driver] = [:]
-    @Published var sessionDatabase: Session = Session()
+    var driverDatabase: [String:Driver] = [:]
+    var sessionDatabase: Session = Session()
     
     var driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"] // Sorted according to position of driver
     
@@ -74,6 +74,13 @@ class DataStore: ObservableObject {
             switch topic {
             case "CarData":
                 driverObject.laps[value[1], default: Lap()].CarData.append(value[0] + "::\(timestamp)")
+                let channels = value[0].components(separatedBy: ",")
+                driverObject.RPM = Int(channels[0]) ?? 0
+                driverObject.Speed = Int(channels[1]) ?? 0
+                driverObject.Gear = Int(channels[2]) ?? 0
+                driverObject.Throttle = Int(channels[3]) ?? 0
+                driverObject.Brake = Int(channels[4]) ?? 0
+                driverObject.DRS = Int(channels[5]) ?? 0
             case "PositionData":
                 driverObject.laps[value[1], default: Lap()].PositionData.append(value[0] + "::\(timestamp)")
             default:

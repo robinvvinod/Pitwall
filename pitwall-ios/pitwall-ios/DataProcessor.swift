@@ -78,10 +78,14 @@ class DataProcessor: DataStore {
     
     func processQueue(startPoint: Int) async -> () {
         var count = startPoint
+        if dataQueue.isEmpty {
+            return
+        }
         dataQueue.sort{ $0 < $1 }
+        var delay: Double = 0
         while true {
-            if !dataQueue.isEmpty {
-                let startTime = DispatchTime.now().rawValue
+            // No delay in processing first message in queue
+            if count == startPoint {
                 let record = dataQueue[count]
                 await MainActor.run(body: {
                     print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
@@ -92,25 +96,12 @@ class DataProcessor: DataStore {
                     } else {
                         addLapSpecificData(topic: record.topic, driver: record.key, value: record.value)
                     }
-
+                    objectWillChange.send()
                 })
-                let processingDelay = DispatchTime.now().rawValue - startTime
-                
-                if count < (dataQueue.count - 1) {
-                    let delay = ((dataQueue[count + 1].timestamp - dataQueue[count].timestamp) * Double(NSEC_PER_SEC)) - Double(processingDelay)
-                    if delay > 0 {
-                        do {
-                            //try await Task.sleep(nanoseconds: UInt64(delay))
-                        }
-                        catch {
-                            return
-                        }
-                    }
-                    //dataQueue.remove(at: count)
-                    count += 1
-                } else {
+            } else { // Not the first message in the queue, possible delay
+                if count > dataQueue.count - 1 {
                     if sessionDatabase.EndTime != "" {
-                        return
+                        return // Session has ended and all messages in queue were processed
                     } else {
                         /*
                         If this condition is reached and it is not the last message for the session, retrieving of messages from Kafka
@@ -120,7 +111,21 @@ class DataProcessor: DataStore {
                     }
                 }
                 
+                let record = dataQueue[count]
+                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
+                    print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
+                    if carSpecific.contains(record.topic) {
+                        addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
+                    } else if sessionSpecific.contains(record.topic) {
+                        addSessionSpecificData(topic: record.topic, key: record.key, value: record.value)
+                    } else {
+                        addLapSpecificData(topic: record.topic, driver: record.key, value: record.value)
+                    }
+                    objectWillChange.send()
+                }
             }
+            count += 1
         }
     }
     

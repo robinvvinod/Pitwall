@@ -10,17 +10,21 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
-    let kafkaURL = "http://localhost:8082"
-    let consumerGroup = "rest_test_165"
+    let kafkaURL = "http://192.168.1.79:8082"
+    let consumerGroup = "rest_test_303"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
     @StateObject var kafka = KafkaConsumer()
     
     var body: some View {
         VStack {
-               
+            
             //sessionInfoView
-            leaderboardView
+            //leaderboardView
+//            TimelineView(.periodic(from: .now, by: 0.2)) { timeline in
+//                carDataView
+//            }
+            carDataView
             
             Button("Connect to Kafka") {
                 Task(priority: .userInitiated) { // Starts Kafka consumer
@@ -28,6 +32,7 @@ struct ContentView: View {
                         try await kafka.createAndSubscribeConsumer(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
                     } catch {
                         guard error as? KafkaConsumer.consumerError == .alreadyExists else {
+                            print(error)
                             return
                         }
                     }
@@ -39,16 +44,17 @@ struct ContentView: View {
                     }
                 }
                 
-                Task(priority: .userInitiated) { // Starts processing of messages in queue
+                Task(priority: .background) { // Starts processing of messages in queue
                     /*
-                    If session is over, all kafka data must be downloaded before processQueue is called.
-                    Since kafka would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
+                     If session is over, all kafka data must be downloaded before processQueue is called.
+                     Since kafka would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
                      
                      Not an issue if joining live since data would arrive in chronological order from all topics
                      
                      If joining with a delay, make sure startPoint of processQueue is >= the kafka data already downloaded
                      */
                     try await Task.sleep(for: .seconds(15))
+                    kafka.listen = false
                     await kafka.processQueue(startPoint: 0)
                 }
             }
@@ -131,26 +137,26 @@ struct ContentView: View {
                                 .padding(.trailing)
                             Spacer()
                         }
-
+                        
                     }
-                        .frame(width: 200, height: 50)
-                        .padding(.trailing,3)
-
-                }
+                    .frame(width: 200, height: 50)
+                    .padding(.trailing,3)
                     
+                }
+                
             }
             
         }
-            .fixedSize(horizontal: false, vertical: true)
-            .padding()
-            
+        .fixedSize(horizontal: false, vertical: true)
+        .padding()
+        
         
     }
     
     var headersArray = ["Car Number", "Lap Time", "Gap", "Int", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3", "Pit", "Stops", "Lap"]
     
     var leaderboardView: some View {
-                        
+        
         ScrollView(.vertical, showsIndicators: true) {
             ScrollView(.horizontal, showsIndicators: false) {
                 
@@ -236,8 +242,8 @@ struct ContentView: View {
                                         Text("")
                                     }
                                 }
-                                    .frame(maxWidth: .infinity)
-                                    .background(j % 2 == 0 ? Color.gray : Color.black)
+                                .frame(maxWidth: .infinity)
+                                .background(j % 2 == 0 ? Color.gray : Color.black)
                             }
                         }
                     }
@@ -245,6 +251,91 @@ struct ContentView: View {
             }.padding()
         }.padding(.top, 1)
     }
+    
+    var carDataView: some View {
+                
+        ZStack {
+            Circle()
+                .trim(from: 0, to: 0.80)
+                .stroke(
+                    Color.green.opacity(0.2),
+                    lineWidth: 30
+                )
+                .rotationEffect(.degrees(125))
+                .padding()
+                .frame(width: 255, height: 255)
+            
+            Circle()
+                .trim(from: 0, to: 0.17)
+                .stroke(
+                    Color.red.opacity(0.2),
+                    lineWidth: 30
+                )
+                .rotationEffect(.degrees(59))
+                .padding()
+                .frame(width: 255, height: 255)
+            
+            Circle()
+                .trim(from: 0, to: (CGFloat(kafka.driverDatabase["14"]!.Throttle)/100) * 0.8)
+                .stroke(
+                    Color.green,
+                    lineWidth: 30
+                )
+                .rotationEffect(.degrees(125))
+                .padding()
+                .frame(width: 255, height: 255)
+            
+            Circle()
+                .trim(from: 0, to: kafka.driverDatabase["14"]!.Brake == 100 ? 0.17 : 0)
+                .stroke(
+                    Color.red,
+                    lineWidth: 30
+                )
+                .rotationEffect(.degrees(59))
+                .padding()
+                .frame(width: 255, height: 255)
+            
+            VStack {
+                Spacer()
+                Text("\(kafka.driverDatabase["14"]!.Speed)")
+                    .padding(.top, 28)
+                    .font(.title)
+                
+                Text("KMH")
+                    .font(.caption)
+                
+                Text("\(kafka.driverDatabase["14"]!.RPM)")
+                    .padding(.top, 1)
+                    .font(.title)
+                
+                Text("RPM")
+                    .font(.caption)
+                
+                Text("\(kafka.driverDatabase["14"]!.Gear)")
+                    .padding(.top, 1)
+                    .font(.title)
+                
+                Text("GEAR")
+                    .font(.caption)
+                
+                Spacer()
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(kafka.driverDatabase["14"]!.DRS >= 10 ? Color.green : Color.green.opacity(0.2))
+                    .frame(width: 75, height: 30)
+                    .overlay(
+                        Text("DRS")
+                            .foregroundColor(Color.white)
+                    )
+                
+                
+            }
+            
+        }
+        .frame(width: 325, height: 325)
+        //.fixedSize(horizontal: false, vertical: true)
+        .padding()
+    }
+    
 }
 
 struct ContentView_Previews: PreviewProvider {

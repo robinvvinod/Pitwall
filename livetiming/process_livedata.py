@@ -239,7 +239,9 @@ class ProcessLiveData:
                         )
                     )
 
-            if "IntervalToPositionAhead" in msg[driver]:
+            if ("IntervalToPositionAhead" in msg[driver]) and (
+                "Value" in msg[driver]["IntervalToPositionAhead"]
+            ):
                 if "+" in msg[driver]["IntervalToPositionAhead"]["Value"]:
                     curLap = await self._get_current_lap(driver)
                     tasks.append(
@@ -718,11 +720,14 @@ class ProcessLiveData:
 
                 curLap = await self._get_current_lap(driver)
 
+                temp = data[driver]["Channels"]
+                res = f'{temp["0"]},{temp["2"]},{temp["3"]},{temp["4"]},{temp["5"]},{temp["45"]}'
+
                 tasks.append(
                     self._redis.hset(
                         name=f"{driver}:{curLap}:CarData",
                         key=timestamp,
-                        value=str(data[driver]["Channels"]),
+                        value=res,
                     )
                 )
 
@@ -730,7 +735,7 @@ class ProcessLiveData:
                     self._kafka.send(
                         topic="CarData",
                         key=driver,
-                        value=f'{str(data[driver]["Channels"])};;{curLap}::{timestamp}',
+                        value=f"{res};;{curLap}::{timestamp}",
                     )
                 )
 

@@ -86,7 +86,6 @@
 		000CFF9D2A0104A600AAF530 = {
 			isa = PBXGroup;
 			children = (
-				00CC995E2A0CB3B900603682 /* DriverObject.swift */,
 				000CFFA82A0104A600AAF530 /* pitwall-ios */,
 				000CFFBE2A0104A700AAF530 /* pitwall-iosTests */,
 				000CFFC82A0104A700AAF530 /* pitwall-iosUITests */,
@@ -112,6 +111,7 @@
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
 				000819682A05444100F729F2 /* DataStore.swift */,
+				00CC995E2A0CB3B900603682 /* DriverObject.swift */,
 				000CFFAD2A0104A700AAF530 /* Assets.xcassets */,
 				000CFFB22A0104A700AAF530 /* Persistence.swift */,
 				000CFFB42A0104A700AAF530 /* pitwall_ios.xcdatamodeld */,
@@ -441,6 +441,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pitwall-ios/Preview Content\"";
+				DEVELOPMENT_TEAM = W887ASN27L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Pitwall;
@@ -471,6 +472,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"pitwall-ios/Preview Content\"";
+				DEVELOPMENT_TEAM = W887ASN27L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Pitwall;

@@ -59,7 +59,7 @@ PitOut {
 }
 
 CarData {
-    driver : CarDataChannelsDict;;LapNumber
+    driver : RPM,Speed,Gear,Throttle,Brake,DRS;;LapNumber
 }
 
 PositionData {

@@ -11,6 +11,8 @@ import Foundation
 
 class KafkaConsumer: DataProcessor  {
     
+    var listen: Bool = true
+    
     enum consumerError: Error {
         case alreadyExists
         case serverResponseError
@@ -97,8 +99,8 @@ class KafkaConsumer: DataProcessor  {
     
     func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
         // TODO: Implement timeout to stop listening for new messages
-        while true {
-            print("iteration start")
+        while listen {
+            //print("iteration start")
             try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {
                     group.addTask(priority: .userInitiated) {
@@ -110,7 +112,8 @@ class KafkaConsumer: DataProcessor  {
                     try await addtoQueue(records: records)
                 }
             }
-            print("iteration end")
+            //print("iteration end")
         }
+        print("Kafka terminated")
     }
 }
