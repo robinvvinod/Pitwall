@@ -7,6 +7,19 @@
 
 import Foundation
 
+// If key does not exist in dict, create it and set it to a default value
+extension Dictionary {
+    subscript(key: Key, setDefault defaultValue: @autoclosure () -> Value) -> Value {
+        mutating get {
+            return self[key] ?? {
+                let value = defaultValue()
+                self[key] = value
+                return value
+            }()
+        }
+    }
+}
+
 class DataStore: ObservableObject {
     
     var driverDatabase: [String:Driver] = [:]
@@ -43,19 +56,19 @@ class DataStore: ObservableObject {
         let driverObject = driverDatabase[driver]
         guard let driverObject = driverObject else {return}
         
-        let value = value.components(separatedBy: "::")[0]
+        let data = value.components(separatedBy: "::")[0]
 
         switch topic {
         case "CurrentLap":
-            driverObject.CurrentLap = value
+            driverObject.CurrentLap = data
         case "NumberOfPitStops":
-            driverObject.NumberOfPitStops = value
+            driverObject.NumberOfPitStops = data
         case "Position":
-            driverObject.Position.append(Int(value) ?? 0)
+            driverObject.Position.append(Int(data) ?? 0)
             driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
-            driverList.insert(driverObject.racingNum, at: (Int(value) ?? 0) - 1)
+            driverList.insert(driverObject.racingNum, at: (Int(data) ?? 0) - 1)
         case "Retired":
-            driverObject.Retired = value
+            driverObject.Retired = data
         default:
             return
         }
@@ -65,16 +78,17 @@ class DataStore: ObservableObject {
         let driverObject = driverDatabase[driver]
         guard let driverObject = driverObject else {return}
         
-        let timestamp = value.components(separatedBy: "::")[1]
+        let temp = value.components(separatedBy: "::")
+        let timestamp = temp[1]
         
         if (topic == "CarData") || (topic == "PositionData") {
           
-            let value = value.components(separatedBy: ";;")
+            let data = temp[0].components(separatedBy: ";;")
             
             switch topic {
             case "CarData":
-                driverObject.laps[value[1], default: Lap()].CarData.append(value[0] + "::\(timestamp)")
-                let channels = value[0].components(separatedBy: ",")
+                driverObject.laps[data[1], setDefault: Lap()].CarData.append(data[0] + "::\(timestamp)")
+                let channels = data[0].components(separatedBy: ",")
                 driverObject.RPM = Int(channels[0]) ?? 0
                 driverObject.Speed = Int(channels[1]) ?? 0
                 driverObject.Gear = Int(channels[2]) ?? 0
@@ -82,77 +96,77 @@ class DataStore: ObservableObject {
                 driverObject.Brake = Int(channels[4]) ?? 0
                 driverObject.DRS = Int(channels[5]) ?? 0
             case "PositionData":
-                driverObject.laps[value[1], default: Lap()].PositionData.append(value[0] + "::\(timestamp)")
+                driverObject.laps[data[1], setDefault: Lap()].PositionData.append(data[0] + "::\(timestamp)")
             default:
                 return
             }
             
         } else if (topic == "GapToLeader") || (topic == "IntervalToPositionAhead") {
             
-            let value = value.components(separatedBy: ",")
+            let data = temp[0].components(separatedBy: ",")
             
             switch topic {
             case "GapToLeader":
-                driverObject.laps[value[1], default: Lap()].GapToLeader.append(value[0] + "::\(timestamp)")
-                driverObject.GapToLeader = value[0]
+                driverObject.laps[data[1], setDefault: Lap()].GapToLeader.append(data[0] + "::\(timestamp)")
+                driverObject.GapToLeader = data[0]
             case "IntervalToPositionAhead":
-                driverObject.laps[value[1], default: Lap()].IntervalToPositionAhead.append(value[0] + "::\(timestamp)")
-                driverObject.IntervalToPositionAhead = value[0]
+                driverObject.laps[data[1], setDefault: Lap()].IntervalToPositionAhead.append(data[0] + "::\(timestamp)")
+                driverObject.IntervalToPositionAhead = data[0]
             default:
                 return
             }
             
         } else {
             
-            let value = value.components(separatedBy: ",")
+            let data = temp[0].components(separatedBy: ",")
             
             switch topic {
             case "TyreAge":
-                driverObject.laps[value[2], default: Lap()].TyreAge = value[0] + "::\(timestamp)"
-                driverObject.TyreAge = Int(value[0]) ?? 0
+                driverObject.laps[data[2], setDefault: Lap()].TyreAge = data[0] + "::\(timestamp)"
+                driverObject.TyreAge = Int(data[0]) ?? 0
                 
             case "LapTime":
-                driverObject.laps[value[1], default: Lap()].LapTime = value[0] + "::\(timestamp)"
-                driverObject.LapTime = value[0]
+                driverObject.laps[data[1], setDefault: Lap()].LapTime = data[0] + "::\(timestamp)"
+                driverObject.LapTime = data[0]
                 
             case "Tyre":
-                driverObject.laps[value[2], default: Lap()].TyreType = value[0] + "::\(timestamp)"
-                driverObject.TyreType = value[0]
+                driverObject.laps[data[2], setDefault: Lap()].TyreType = data[0] + "::\(timestamp)"
+                driverObject.TyreType = data[0]
                 
             case "SectorTime":
-                if value[1] == "1" {
-                    driverObject.laps[value[2], default: Lap()].Sector1Time = value[0] + "::\(timestamp)"
-                    driverObject.Sector1Time = value[0]
-                } else if value[1] == "2" {
-                    driverObject.laps[value[2], default: Lap()].Sector2Time = value[0] + "::\(timestamp)"
-                    driverObject.Sector2Time = value[0]
-                } else if value[1] == "3" {
-                    driverObject.laps[value[2], default: Lap()].Sector3Time = value[0] + "::\(timestamp)"
-                    driverObject.Sector3Time = value[0]
+                if data[1] == "1" {
+                    driverObject.laps[data[2], setDefault: Lap()].Sector1Time = data[0] + "::\(timestamp)"
+                    driverObject.Sector1Time = data[0]
+                } else if data[1] == "2" {
+                    driverObject.laps[data[2], setDefault: Lap()].Sector2Time = data[0] + "::\(timestamp)"
+                    driverObject.Sector2Time = data[0]
+                } else if data[1] == "3" {
+                    driverObject.laps[data[2], setDefault: Lap()].Sector3Time = data[0] + "::\(timestamp)"
+                    driverObject.Sector3Time = data[0]
                 }
                 
             case "Speed":
-                if value[0] == "Sector1SpeedTrap" {
-                    driverObject.laps[value[2], default: Lap()].Sector1SpeedTrap = value[1] + "::\(timestamp)"
-                    driverObject.Sector1SpeedTrap = Float(value[1]) ?? 0
-                } else if value[0] == "Sector2SpeedTrap" {
-                    driverObject.laps[value[2], default: Lap()].Sector2SpeedTrap = value[1] + "::\(timestamp)"
-                    driverObject.Sector2SpeedTrap = Float(value[1]) ?? 0
-                } else if value[0] == "FinishLineSpeedTrap" {
-                    driverObject.laps[value[2], default: Lap()].FinishLineSpeedTrap = value[1] + "::\(timestamp)"
-                    driverObject.FinishLineSpeedTrap = Float(value[1]) ?? 0
-                } else if value[0] == "BackStraightSpeedTrap" {
-                    driverObject.laps[value[2], default: Lap()].BackStraightSpeedTrap = value[1] + "::\(timestamp)"
-                    driverObject.BackStraightSpeedTrap = Float(value[1]) ?? 0
+                if data[0] == "Sector1SpeedTrap" {
+                    driverObject.laps[data[2], setDefault: Lap()].Sector1SpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.Sector1SpeedTrap = Float(data[1]) ?? 0
+                } else if data[0] == "Sector2SpeedTrap" {
+                    driverObject.laps[data[2], setDefault: Lap()].Sector2SpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.Sector2SpeedTrap = Float(data[1]) ?? 0
+                } else if data[0] == "FinishLineSpeedTrap" {
+                    driverObject.laps[data[2], setDefault: Lap()].FinishLineSpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.FinishLineSpeedTrap = Float(data[1]) ?? 0
+                } else if data[0] == "BackStraightSpeedTrap" {
+                    driverObject.laps[data[2], setDefault: Lap()].BackStraightSpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.BackStraightSpeedTrap = Float(data[1]) ?? 0
                 }
                 
             case "PitIn":
-                driverObject.laps[value[0], default: Lap()].PitIn = "true" + "::\(timestamp)"
+                driverObject.laps[data[0], setDefault: Lap()].PitIn = "true" + "::\(timestamp)"
                 driverObject.PitIn = true
                 driverObject.PitOut = false
                 
             case "PitOut":
-                driverObject.laps[value[0], default: Lap()].PitOut = "true" + "::\(timestamp)"
+                driverObject.laps[data[0], setDefault: Lap()].PitOut = "true" + "::\(timestamp)"
                 driverObject.PitOut = true
                 driverObject.PitIn = false
                 

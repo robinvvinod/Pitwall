@@ -6,15 +6,17 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "rest_test_303"
+    let consumerGroup = "iosapp_test_004"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
     @StateObject var kafka = KafkaConsumer()
+    @State var flag = false
     
     var body: some View {
         VStack {
@@ -24,7 +26,10 @@ struct ContentView: View {
 //            TimelineView(.periodic(from: .now, by: 0.2)) { timeline in
 //                carDataView
 //            }
-            carDataView
+            //carDataView
+            if flag {
+                speedTraceView
+            }
             
             Button("Connect to Kafka") {
                 Task(priority: .userInitiated) { // Starts Kafka consumer
@@ -44,7 +49,7 @@ struct ContentView: View {
                     }
                 }
                 
-                Task(priority: .background) { // Starts processing of messages in queue
+                Task(priority: .userInitiated) { // Starts processing of messages in queue
                     /*
                      If session is over, all kafka data must be downloaded before processQueue is called.
                      Since kafka would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
@@ -56,6 +61,8 @@ struct ContentView: View {
                     try await Task.sleep(for: .seconds(15))
                     kafka.listen = false
                     await kafka.processQueue(startPoint: 0)
+                    print("Processing done")
+                    flag = true
                 }
             }
             
@@ -254,86 +261,106 @@ struct ContentView: View {
     
     var carDataView: some View {
                 
-        ZStack {
-            Circle()
-                .trim(from: 0, to: 0.80)
-                .stroke(
-                    Color.green.opacity(0.2),
-                    lineWidth: 30
-                )
-                .rotationEffect(.degrees(125))
-                .padding()
-                .frame(width: 255, height: 255)
-            
-            Circle()
-                .trim(from: 0, to: 0.17)
-                .stroke(
-                    Color.red.opacity(0.2),
-                    lineWidth: 30
-                )
-                .rotationEffect(.degrees(59))
-                .padding()
-                .frame(width: 255, height: 255)
-            
-            Circle()
-                .trim(from: 0, to: (CGFloat(kafka.driverDatabase["14"]!.Throttle)/100) * 0.8)
-                .stroke(
-                    Color.green,
-                    lineWidth: 30
-                )
-                .rotationEffect(.degrees(125))
-                .padding()
-                .frame(width: 255, height: 255)
-            
-            Circle()
-                .trim(from: 0, to: kafka.driverDatabase["14"]!.Brake == 100 ? 0.17 : 0)
-                .stroke(
-                    Color.red,
-                    lineWidth: 30
-                )
-                .rotationEffect(.degrees(59))
-                .padding()
-                .frame(width: 255, height: 255)
-            
-            VStack {
-                Spacer()
-                Text("\(kafka.driverDatabase["14"]!.Speed)")
-                    .padding(.top, 28)
-                    .font(.title)
-                
-                Text("KMH")
+        HStack(alignment: .top) {
+        
+            HStack(spacing: 0) {
+                Text("Throttle")
+                    .rotationEffect(.degrees(-90))
+                    .fixedSize()
+                    .frame(width: 20, height: 100)
                     .font(.caption)
                 
-                Text("\(kafka.driverDatabase["14"]!.RPM)")
-                    .padding(.top, 1)
-                    .font(.title)
-                
-                Text("RPM")
-                    .font(.caption)
-                
-                Text("\(kafka.driverDatabase["14"]!.Gear)")
-                    .padding(.top, 1)
-                    .font(.title)
-                
-                Text("GEAR")
-                    .font(.caption)
-                
-                Spacer()
-                RoundedRectangle(cornerRadius: 25)
-                    .fill(kafka.driverDatabase["14"]!.DRS >= 10 ? Color.green : Color.green.opacity(0.2))
-                    .frame(width: 75, height: 30)
-                    .overlay(
-                        Text("DRS")
-                            .foregroundColor(Color.white)
-                    )
-                
-                
+                VStack {
+                    ZStack(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 25, height: 100)
+                        
+                        Rectangle()
+                            .fill(Color.green)
+                            .frame(width: 25, height: CGFloat(kafka.driverDatabase["14"]!.Throttle))
+                        
+                    }
+                    Text("\(kafka.driverDatabase["14"]!.Throttle)")
+                        .font(.caption)
+                }
             }
             
+            HStack(spacing: 0) {
+                Text("Brake")
+                    .rotationEffect(.degrees(-90))
+                    .fixedSize()
+                    .frame(width: 20, height: 100)
+                    .font(.caption)
+                
+                VStack {
+                    ZStack {
+                        Rectangle()
+                            .fill(Color.red.opacity(0.2))
+                            .frame(width: 25, height: 100)
+                        
+                        Rectangle()
+                            .trim(from: 0, to: kafka.driverDatabase["14"]!.Brake == 100 ? 1 : 0)
+                            .fill(Color.red)
+                            .frame(width: 25, height: 100)
+                        
+                    }
+                    Text("\(kafka.driverDatabase["14"]!.Brake)")
+                        .font(.caption)
+                }
+            }
+            
+            VStack(spacing: 0) {
+                
+                Text("\(kafka.driverDatabase["14"]!.Speed)")
+                    .font(.title3)
+               
+                Text("\(kafka.driverDatabase["14"]!.RPM)")
+                    .font(.title3)
+                
+                Text("\(kafka.driverDatabase["14"]!.Gear)")
+                    .font(.title3)
+                
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(kafka.driverDatabase["14"]!.DRS >= 10 ? Color.green : Color.green.opacity(0.2))
+                    .frame(width: 50, height: 20)
+                    .overlay(
+                        Text("DRS")
+                            .foregroundColor(kafka.driverDatabase["14"]!.DRS >= 10 ? Color.white : Color.white.opacity(0.2))
+                            .font(.caption)
+                    )
+                    .padding(.top, 5)
+                
+            }.frame(width: 75, height: 100)
+            
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+                Text("KMH")
+                    .font(.caption)
+                Spacer()
+                Text("RPM")
+                    .font(.caption)
+                Spacer()
+                Text("GEAR")
+                    .font(.caption)
+                Spacer()
+            }.frame(width: 35, height: 75)
+                    
         }
-        .frame(width: 325, height: 325)
-        //.fixedSize(horizontal: false, vertical: true)
-        .padding()
+            .frame(width: 300, height: 100)
+            .padding()
+    }
+    
+    var speedTraceView: some View {
+
+        Chart {
+            ForEach(kafka.driverDatabase["14"]!.laps["15"]!.CarData, id: \.self) { data in
+                let temp = data.components(separatedBy: "::")
+                let timestamp = temp[1]
+                let speed = temp[0].components(separatedBy: ",")[1]
+                LineMark(x: .value("Time", timestamp), y: .value("Speed", speed))
+            }
+        }
     }
     
 }

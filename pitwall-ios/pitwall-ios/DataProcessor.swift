@@ -112,7 +112,9 @@ class DataProcessor: DataStore {
                 }
                 
                 let record = dataQueue[count]
-                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
+                
+//                print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
+//                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
                     print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
                     if carSpecific.contains(record.topic) {

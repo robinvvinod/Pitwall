@@ -90,7 +90,7 @@ class ProcessLiveData:
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
         if curLap is None:
-            return 0
+            return 1
         return int(curLap.split("::")[0])
 
     def _serializer(self, value) -> bytes:
@@ -264,99 +264,97 @@ class ProcessLiveData:
                 isinstance(msg[driver]["Sectors"], dict)
             ):
                 for indvSector in msg[driver]["Sectors"]:
-                    if "Value" in msg[driver]["Sectors"][indvSector]:
+                    if ("Value" in msg[driver]["Sectors"][indvSector]) and (
+                        msg[driver]["Sectors"][indvSector]["Value"] != ""
+                    ):
                         curLap = await self._get_current_lap(driver)
                         sectorNumber = int(indvSector) + 1
                         sectorTime = msg[driver]["Sectors"][indvSector]["Value"]
 
-                        # Sometimes "Value" is empty due to poor formatting in the livedata
-                        if sectorTime != "":
-                            tasks.append(
-                                self._redis.hset(
-                                    name=f"{driver}:{curLap}",
-                                    key=f"Sector{sectorNumber}Time",
-                                    value=f"{sectorTime}::{timestamp}",
-                                )
+                        tasks.append(
+                            self._redis.hset(
+                                name=f"{driver}:{curLap}",
+                                key=f"Sector{sectorNumber}Time",
+                                value=f"{sectorTime}::{timestamp}",
+                            )
+                        )
+
+                        tasks.append(
+                            self._kafka.send(
+                                topic="SectorTime",
+                                key=driver,
+                                value=f"{sectorTime},{sectorNumber},{curLap}::{timestamp}",
+                            )
+                        )
+
+                        # If driver has a sector 3 time, he has crossed the start/finish line
+                        # LapTime is calculated from summing individual sectors
+                        if sectorNumber == 3:
+                            sector1Time = await self._redis.hget(
+                                name=f"{driver}:{curLap}", key="Sector1Time"
+                            )
+                            sector2Time = await self._redis.hget(
+                                name=f"{driver}:{curLap}", key="Sector2Time"
                             )
 
-                            tasks.append(
-                                self._kafka.send(
-                                    topic="SectorTime",
-                                    key=driver,
-                                    value=f"{sectorTime},{sectorNumber},{curLap}::{timestamp}",
-                                )
-                            )
+                            # We only calculate LapTime if all 3 sectors are present. Otherwise, it is an outlap or red flagged lap
+                            if (sector1Time is not None) and (sector2Time is not None):
+                                sector1Time = sector1Time.split("::")[0]
+                                sector2Time = sector2Time.split("::")[0]
 
-                            # If driver has a sector 3 time, he has crossed the start/finish line
-                            # LapTime is calculated from summing individual sectors
-                            if sectorNumber == 3:
-                                sector1Time = await self._redis.hget(
-                                    name=f"{driver}:{curLap}", key="Sector1Time"
-                                )
-                                sector2Time = await self._redis.hget(
-                                    name=f"{driver}:{curLap}", key="Sector2Time"
+                                lapTime = (
+                                    float(sector1Time)
+                                    + float(sector2Time)
+                                    + float(sectorTime)
                                 )
 
-                                # We only calculate LapTime if all 3 sectors are present. Otherwise, it is an outlap or red flagged lap
-                                if (sector1Time is not None) and (
-                                    sector2Time is not None
-                                ):
-                                    sector1Time = sector1Time.split("::")[0]
-                                    sector2Time = sector2Time.split("::")[0]
+                                min = int(lapTime // 60)
+                                remainder = str(round(lapTime % 60, 3)).split(".")
+                                sec = remainder[0]
+                                ms = remainder[1][:3]
 
-                                    lapTime = (
-                                        float(sector1Time)
-                                        + float(sector2Time)
-                                        + float(sectorTime)
+                                lapTime = f"{min}:{sec:0>2}.{ms}"
+
+                                tasks.append(
+                                    self._redis.hset(
+                                        name=f"{driver}:{curLap}",
+                                        key="LapTime",
+                                        value=f"{lapTime}::{timestamp}",
                                     )
+                                )
 
-                                    min = int(lapTime // 60)
-                                    remainder = str(round(lapTime % 60, 3)).split(".")
-                                    sec = remainder[0]
-                                    ms = remainder[1][:3]
-
-                                    lapTime = f"{min}:{sec:0>2}.{ms}"
-
-                                    tasks.append(
-                                        self._redis.hset(
-                                            name=f"{driver}:{curLap}",
-                                            key="LapTime",
-                                            value=f"{lapTime}::{timestamp}",
-                                        )
+                                tasks.append(
+                                    self._kafka.send(
+                                        topic="LapTime",
+                                        key=driver,
+                                        value=f"{lapTime},{curLap}::{timestamp}",
                                     )
+                                )
 
-                                    tasks.append(
-                                        self._kafka.send(
-                                            topic="LapTime",
-                                            key=driver,
-                                            value=f"{lapTime},{curLap}::{timestamp}",
-                                        )
+                            # If driver crossed start/finish line and is not currently in the pits, start a new lap
+                            if (
+                                await self._redis.hexists(
+                                    name=f"{driver}:{curLap}", key="PitIn"
+                                )
+                                is False
+                            ):
+                                tasks.append(
+                                    self._redis.hset(
+                                        name=driver,
+                                        key="CurrentLap",
+                                        value=f"{curLap + 1}::{timestamp}",
                                     )
+                                )
 
-                                # If driver crossed start/finish line and is not currently in the pits, start a new lap
-                                if (
-                                    await self._redis.hexists(
-                                        name=f"{driver}:{curLap}", key="PitIn"
+                                tasks.append(
+                                    self._kafka.send(
+                                        topic="CurrentLap",
+                                        key=driver,
+                                        value=f"{curLap + 1}::{timestamp}",
                                     )
-                                    is False
-                                ):
-                                    tasks.append(
-                                        self._redis.hset(
-                                            name=driver,
-                                            key="CurrentLap",
-                                            value=f"{curLap + 1}::{timestamp}",
-                                        )
-                                    )
+                                )
 
-                                    tasks.append(
-                                        self._kafka.send(
-                                            topic="CurrentLap",
-                                            key=driver,
-                                            value=f"{curLap + 1}::{timestamp}",
-                                        )
-                                    )
-
-                        # TODO: Process personal/overall fastest sectors
+                    # TODO: Process personal/overall fastest sectors
 
             if "Speeds" in msg[driver]:
                 for indvSpeed in msg[driver]["Speeds"]:
@@ -405,7 +403,7 @@ class ProcessLiveData:
                             self._kafka.send(
                                 topic="Speed",
                                 key=driver,
-                                value=f"{_STIdentifier},{mapping[_STIdentifier]},{curLap}::{timestamp}",
+                                value=f'{_STIdentifier},{mapping[_STIdentifier].split("::")[0]},{curLap}::{timestamp}',
                             )
                         )
 
