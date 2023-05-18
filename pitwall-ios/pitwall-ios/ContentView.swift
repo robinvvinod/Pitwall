@@ -12,7 +12,8 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "iosapp_test_004"
+    let consumerGroup = "iosapp_test_016"
+    //let consumerGroup = UUID().uuidString.lowercased()
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
     
     @StateObject var kafka = KafkaConsumer()
@@ -60,7 +61,7 @@ struct ContentView: View {
                      */
                     try await Task.sleep(for: .seconds(15))
                     kafka.listen = false
-                    await kafka.processQueue(startPoint: 0)
+                    await kafka.processQueue()
                     print("Processing done")
                     flag = true
                 }
@@ -354,11 +355,9 @@ struct ContentView: View {
     var speedTraceView: some View {
 
         Chart {
-            ForEach(kafka.driverDatabase["14"]!.laps["15"]!.CarData, id: \.self) { data in
-                let temp = data.components(separatedBy: "::")
-                let timestamp = temp[1]
-                let speed = temp[0].components(separatedBy: ",")[1]
-                LineMark(x: .value("Time", timestamp), y: .value("Speed", speed))
+            ForEach(Array(kafka.driverDatabase["14"]!.laps["15"]!.CarData.enumerated()), id: \.offset) { (index,data) in
+                let speed = Int(data.components(separatedBy: "::")[0].components(separatedBy: ",")[1]) ?? 0
+                LineMark(x: .value("Distance", index), y: .value("Speed", speed))
             }
         }
     }

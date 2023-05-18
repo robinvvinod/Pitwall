@@ -76,7 +76,7 @@ class DataProcessor: DataStore {
         }
     }
     
-    func processQueue(startPoint: Int) async -> () {
+    func processQueueWithDelay(startPoint: Int) async -> () {
         var count = startPoint
         if dataQueue.isEmpty {
             return
@@ -111,12 +111,9 @@ class DataProcessor: DataStore {
                     }
                 }
                 
-                let record = dataQueue[count]
-                
-//                print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
-//                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
+                let record = dataQueue[count]                
+                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
-                    print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
                     if carSpecific.contains(record.topic) {
                         addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
                     } else if sessionSpecific.contains(record.topic) {
@@ -126,6 +123,37 @@ class DataProcessor: DataStore {
                     }
                     objectWillChange.send()
                 }
+            }
+            count += 1
+        }
+    }
+    
+    func processQueue() async -> () {
+        var count = 0
+        if dataQueue.isEmpty {
+            return
+        }
+        dataQueue.sort{ $0 < $1 }
+        while true {
+            if count > dataQueue.count - 1 {
+                if sessionDatabase.EndTime != "" {
+                    return // Session has ended and all messages in queue were processed
+                } else {
+                    /*
+                    If this condition is reached and it is not the last message for the session, retrieving of messages from Kafka
+                    is slower than the delay behind the live stream. TODO: Handle this case by notifying user about slow network.
+                    */
+                    return
+                }
+            }
+            
+            let record = dataQueue[count]
+            if carSpecific.contains(record.topic) {
+                addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
+            } else if sessionSpecific.contains(record.topic) {
+                addSessionSpecificData(topic: record.topic, key: record.key, value: record.value)
+            } else {
+                addLapSpecificData(topic: record.topic, driver: record.key, value: record.value)
             }
             count += 1
         }
