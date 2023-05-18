@@ -11,11 +11,11 @@ CarNumber:LapNumber:IntervalToPositionAhead {
 }
 
 CarNumber:LapNumber:CarData {
-    Timestamp : CarData
+    Timestamp : RPM,Speed,Gear,Throttle,Brake,DRS
 }
 
 CarNumber:LapNumber:PositionData {
-    Timestamp : PositionData
+    Timestamp : On/OffTrack,X,Y,Z
 }
 
 CarNumber:LapNumber {

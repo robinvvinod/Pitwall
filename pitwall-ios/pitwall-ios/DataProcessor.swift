@@ -112,7 +112,7 @@ class DataProcessor: DataStore {
                 }
                 
                 let record = dataQueue[count]                
-                delay += Double(dataQueue[count].timestamp - dataQueue[count - 1].timestamp)
+                delay += dataQueue[count].timestamp - dataQueue[count - 1].timestamp
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
                     if carSpecific.contains(record.topic) {
                         addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)

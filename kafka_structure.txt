@@ -63,7 +63,7 @@ CarData {
 }
 
 PositionData {
-    driver : PositionDataDict;;LapNumber
+    driver : On/OffTrack,X,Y,Z;;LapNumber
 }
 
 -----SESSION SPECIFIC--------

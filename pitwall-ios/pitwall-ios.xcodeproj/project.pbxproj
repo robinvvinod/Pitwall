@@ -19,6 +19,7 @@
 		000CFFCC2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */; };
 		000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */; };
 		0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0022E7902A03EF170030BB29 /* DataProcessor.swift */; };
+		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 /* End PBXBuildFile section */
 
@@ -55,6 +56,7 @@
 		000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KafkaConsumer.swift; sourceTree = "<group>"; };
 		0022E7902A03EF170030BB29 /* DataProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataProcessor.swift; sourceTree = "<group>"; };
+		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -108,6 +110,7 @@
 			children = (
 				000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */,
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
+				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
 				000819682A05444100F729F2 /* DataStore.swift */,
@@ -276,6 +279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */,
+				00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */,
 				000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */,
 				000CFFB32A0104A700AAF530 /* Persistence.swift in Sources */,
 				000819692A05444100F729F2 /* DataStore.swift in Sources */,

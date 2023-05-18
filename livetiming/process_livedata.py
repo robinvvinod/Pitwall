@@ -766,11 +766,13 @@ class ProcessLiveData:
 
                 curLap = await self._get_current_lap(driver)
 
+                res = f'{data[driver]["Status"]},{data[driver]["X"]},{data[driver]["Y"]},{data[driver]["Z"]}'
+
                 tasks.append(
                     self._redis.hset(
                         name=f"{driver}:{curLap}:PositionData",
                         key=timestamp,
-                        value=str(data[driver]),
+                        value=res,
                     )
                 )
 
@@ -778,7 +780,7 @@ class ProcessLiveData:
                     self._kafka.send(
                         topic="PositionData",
                         key=driver,
-                        value=f"{str(data[driver])};;{curLap}::{timestamp}",
+                        value=f"{res};;{curLap}::{timestamp}",
                     )
                 )
 

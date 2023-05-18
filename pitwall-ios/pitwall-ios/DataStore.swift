@@ -97,6 +97,15 @@ class DataStore: ObservableObject {
                 driverObject.DRS = Int(channels[5]) ?? 0
             case "PositionData":
                 driverObject.laps[data[1], setDefault: Lap()].PositionData.append(data[0] + "::\(timestamp)")
+                let channels = data[0].components(separatedBy: ",")
+                if channels[0] == "OnTrack" {
+                    driverObject.trackStatus = true
+                } else {
+                    driverObject.trackStatus = false
+                }
+                driverObject.X = Int(channels[1]) ?? 0
+                driverObject.Y = Int(channels[2]) ?? 0
+                driverObject.Z = Int(channels[3]) ?? 0
             default:
                 return
             }

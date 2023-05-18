@@ -39,13 +39,13 @@ class Driver {
         self.racingNum = racingNum
     }
     
+    var laps: [String:Lap] = [:]
+
     // Live data
     var CurrentLap = "0"
     var NumberOfPitStops = "0"
     var Position: [Int] = []
     var Retired = "false"
-    var laps: [String:Lap] = [:]
-    
     var GapToLeader: String = "-"
     var IntervalToPositionAhead: String = "-"
     var Speed: Int = 0
@@ -54,7 +54,10 @@ class Driver {
     var Throttle: Int = 0
     var Brake: Int = 0
     var DRS: Int = 0
-    var PositionData: String = ""
+    var X: Int = 0
+    var Y: Int = 0
+    var Z: Int = 0
+    var trackStatus: Bool = false
     var LapTime: String = "-"
     var TyreAge: Int = 0
     var TyreType: String = "-"
