@@ -9,7 +9,13 @@ import Foundation
 
 // API Reference: https://docs.confluent.io/platform/current/kafka-rest/api.html
 
-class KafkaConsumer: DataProcessor  {
+class KafkaConsumer {
+    
+    var processor: DataProcessor
+    
+    init(DataProcessor: DataProcessor) {
+        self.processor = DataProcessor
+    }
     
     var listen: Bool = true
     
@@ -109,7 +115,7 @@ class KafkaConsumer: DataProcessor  {
                 }
 
                 for try await records in group {
-                    try await addtoQueue(records: records)
+                    try await processor.addtoQueue(records: records)
                 }
             }
             //print("iteration end")
