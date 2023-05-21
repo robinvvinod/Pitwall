@@ -26,14 +26,6 @@ struct SessionInfoView: View {
             
             VStack(alignment: .leading, spacing: 0) {
                 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.gray).opacity(0.2)
-                        .frame(height: 150)
-                        .padding()
-                    
-                }
-                
                 HStack(alignment: .top, spacing: 0) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("\(country)")
@@ -52,7 +44,7 @@ struct SessionInfoView: View {
                     Text("\(countryFlag)")
                         .padding(.trailing)
                         .font(.largeTitle)
-                }
+                }.padding(.top)
                 
                 HStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 0) {
@@ -88,26 +80,27 @@ struct SessionInfoView: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .padding(.trailing)
+                                .fixedSize(horizontal: false, vertical: true)
                             Spacer()
                         }
                         
                     }
                     .frame(width: 200, height: 50)
-                    .padding(.trailing,3)
+                    .padding(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
                     
-                }
+                }.fixedSize(horizontal: false, vertical: true)
                 
-            }
+            }.fixedSize(horizontal: false, vertical: true)
             
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding()
-        
     }
 }
 
-//struct SessionInfoView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        SessionInfoView(country: "United States", raceName: "Miami International Autodrome", countryFlag: "🇺🇸", roundNum: "5", roundDate: "05 - 07 May", sessionName: "Sprint Race")
-//    }
-//}
+struct SessionInfoView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}

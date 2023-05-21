@@ -152,8 +152,6 @@ class ProcessLiveData:
                         )
 
                     if ("LapTime" in indvData) and ("LapNumber" in indvData):
-                        curLap = await self._get_current_lap(driver)
-
                         tasks.append(
                             self._redis.hset(
                                 name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
@@ -608,6 +606,45 @@ class ProcessLiveData:
                         )
                     )
 
+                    # Handling deleted lap times
+                    if "DELETED" in data["Message"]:
+                        driver = ""
+                        lap = ""
+
+                        # Find which drivers lap time was deleted
+                        msgParts = data["Message"].split("CAR")
+                        for item in msgParts:
+                            for char in item.strip():
+                                if char.isdigit():
+                                    driver += char
+                                else:
+                                    break
+                        # Find which lap number was deleted
+                        msgParts = data["Message"].split("LAP")
+                        for item in msgParts:
+                            for char in item.strip():
+                                if char.isdigit():
+                                    lap += char
+                                else:
+                                    break
+
+                        if (driver != "") and (lap != ""):
+                            tasks.append(
+                                self._redis.hset(
+                                    name=f"{driver}:{lap}",
+                                    key="Deleted",
+                                    value=f"true::{timestamp}",
+                                )
+                            )
+
+                            tasks.append(
+                                self._kafka.send(
+                                    topic="DeletedLaps",
+                                    key=driver,
+                                    value=f"{lap}::{timestamp}",
+                                )
+                            )
+
                 elif data["Category"] == "Drs":
                     tasks.append(
                         self._redis.hset(
@@ -716,7 +753,17 @@ class ProcessLiveData:
                 if driver in self.retiredDrivers:
                     continue
 
-                curLap = await self._get_current_lap(driver)
+                curLap = await self._redis.hget(name=driver, key="CurrentLap")
+                if curLap is None:
+                    curLap = 1
+                    lapStartTime = 0
+                else:
+                    temp = curLap.split("::")
+                    curLap = int(temp[0])
+                    lapStartTime = float(temp[1])
+
+                if timestamp < lapStartTime:
+                    curLap -= 1
 
                 temp = data[driver]["Channels"]
                 res = f'{temp["0"]},{temp["2"]},{temp["3"]},{temp["4"]},{temp["5"]},{temp["45"]}'
@@ -764,7 +811,17 @@ class ProcessLiveData:
                 if driver in self.retiredDrivers:
                     continue
 
-                curLap = await self._get_current_lap(driver)
+                curLap = await self._redis.hget(name=driver, key="CurrentLap")
+                if curLap is None:
+                    curLap = 1
+                    lapStartTime = 0
+                else:
+                    temp = curLap.split("::")
+                    curLap = int(temp[0])
+                    lapStartTime = float(temp[1])
+
+                if timestamp < lapStartTime:
+                    curLap -= 1
 
                 res = f'{data[driver]["Status"]},{data[driver]["X"]},{data[driver]["Y"]},{data[driver]["Z"]}'
 

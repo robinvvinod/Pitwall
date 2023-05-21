@@ -12,56 +12,60 @@ struct ContentView: View {
     
     let kafkaURL = "http://192.168.1.79:8082"
     let consumerGroup = "iosapp_test_27"
-    let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM"]
+    let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","LapCount","SessionStatus","RCM", "DeletedLaps"]
     
-    @StateObject var processor = DataProcessor()
+    @StateObject var processor = DataProcessor(sessionType: "RACE", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"])
     @State var flag = false
     
     var body: some View {
-        VStack {
-            
-            LeaderboardView(headersArray: ["Car Number", "Lap Time", "Gap", "Int", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3", "Pit", "Stops", "Lap"])
-            
-            Button("Connect to kafka") {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack {
                 
-                let kafka = KafkaConsumer(DataProcessor: processor)
+                SessionInfoView(country: "United States", raceName: "Miami International Autodrome", countryFlag: "🇺🇸", roundNum: "5", roundDate: "05 - 07 May", sessionName: "Sprint Race")
+                
+                LeaderboardView(headersArray: ["Lap Time", "Gap", "Int", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3", "Pit", "Stops", "Lap"])
+                
+                Button("Connect to kafka") {
+                    
+                    let kafka = KafkaConsumer(DataProcessor: processor)
 
-                Task(priority: .userInitiated) { // Starts processor consumer
-                    do {
-                        try await kafka.createAndSubscribeConsumer(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
-                    } catch {
-                        guard error as? KafkaConsumer.consumerError == .alreadyExists else {
+                    Task(priority: .userInitiated) { // Starts processor consumer
+                        do {
+                            try await kafka.createAndSubscribeConsumer(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
+                        } catch {
+                            guard error as? KafkaConsumer.consumerError == .alreadyExists else {
+                                print(error)
+                                return
+                            }
+                        }
+                        
+                        do {
+                            try await kafka.startListening(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
+                        } catch {
                             print(error)
-                            return
                         }
                     }
                     
-                    do {
-                        try await kafka.startListening(kafkaURL: kafkaURL, topics: topics, consumerGroup: consumerGroup)
-                    } catch {
-                        print(error)
+                    Task(priority: .userInitiated) { // Starts processing of messages in queue
+                        /*
+                         If session is over, all processor data must be downloaded before processQueue is called.
+                         Since processor would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
+                         
+                         Not an issue if joining live since data would arrive in chronological order from all topics
+                         
+                         If joining with a delay, make sure startPoint of processQueue is >= the processor data already downloaded
+                         */
+                        try await Task.sleep(for: .seconds(15))
+                        kafka.listen = false
+                        await processor.processQueue()
+                        print("Processing done")
                     }
                 }
                 
-                Task(priority: .userInitiated) { // Starts processing of messages in queue
-                    /*
-                     If session is over, all processor data must be downloaded before processQueue is called.
-                     Since processor would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
-                     
-                     Not an issue if joining live since data would arrive in chronological order from all topics
-                     
-                     If joining with a delay, make sure startPoint of processQueue is >= the processor data already downloaded
-                     */
-                    try await Task.sleep(for: .seconds(15))
-                    kafka.listen = false
-                    await processor.processQueue()
-                    print("Processing done")
-                }
-            }
-            
-            Spacer()
-            
-        }.environmentObject(processor)
+                Spacer()
+                
+            }.environmentObject(processor)
+        }
     }
     
 //    var positionView: some View {

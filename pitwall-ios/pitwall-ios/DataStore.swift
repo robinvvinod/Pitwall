@@ -25,9 +25,15 @@ class DataStore: ObservableObject {
     var driverDatabase: [String:Driver] = [:]
     var sessionDatabase: Session = Session()
     
-    var driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"] // Sorted according to position of driver
+    //var driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"] // Sorted according to position of driver
+    var sessionType: String
+    var driverList: [String]
     
-    init() {
+    init(sessionType: String, driverList: [String]) {
+
+        self.sessionType = sessionType
+        self.driverList = driverList
+        
         for driver in driverList {
             driverDatabase[driver] = Driver(racingNum: driver)
         }
@@ -157,16 +163,16 @@ class DataStore: ObservableObject {
             case "Speed":
                 if data[0] == "Sector1SpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector1SpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.Sector1SpeedTrap = Float(data[1]) ?? 0
+                    driverObject.Sector1SpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "Sector2SpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector2SpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.Sector2SpeedTrap = Float(data[1]) ?? 0
+                    driverObject.Sector2SpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "FinishLineSpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].FinishLineSpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.FinishLineSpeedTrap = Float(data[1]) ?? 0
+                    driverObject.FinishLineSpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "BackStraightSpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].BackStraightSpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.BackStraightSpeedTrap = Float(data[1]) ?? 0
+                    driverObject.BackStraightSpeedTrap = Int(data[1]) ?? 0
                 }
                 
             case "PitIn":
@@ -179,6 +185,8 @@ class DataStore: ObservableObject {
                 driverObject.PitOut = true
                 driverObject.PitIn = false
                 
+            case "DeletedLaps":
+                driverObject.laps[data[0], setDefault: Lap()].Deleted = true
             default:
                 return
             }            

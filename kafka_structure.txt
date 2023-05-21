@@ -66,6 +66,10 @@ PositionData {
     driver : On/OffTrack,X,Y,Z;;LapNumber
 }
 
+DeletedLaps {
+    driver : LapNumber
+}
+
 -----SESSION SPECIFIC--------
 
 TotalLaps {

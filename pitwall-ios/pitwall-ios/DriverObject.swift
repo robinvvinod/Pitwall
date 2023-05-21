@@ -30,6 +30,7 @@ class Lap {
     var BackStraightSpeedTrap: String = ""
     var PitIn: String = ""
     var PitOut: String = ""
+    var Deleted: Bool = false
 }
 
 class Driver {
@@ -41,7 +42,7 @@ class Driver {
     
     var laps: [String:Lap] = [:]
 
-    // Live data
+    // Live data, shows current status of any value
     var CurrentLap = "0"
     var NumberOfPitStops = "0"
     var Position: [Int] = []
@@ -66,10 +67,10 @@ class Driver {
     var Sector3Time: String = "-"
     var PitIn: Bool = false
     var PitOut: Bool = false
-    var Sector1SpeedTrap: Float = 0
-    var Sector2SpeedTrap: Float = 0
-    var FinishLineSpeedTrap: Float = 0
-    var BackStraightSpeedTrap: Float = 0
+    var Sector1SpeedTrap: Int = 0
+    var Sector2SpeedTrap: Int = 0
+    var FinishLineSpeedTrap: Int = 0
+    var BackStraightSpeedTrap: Int = 0
 }
 
 struct Session {

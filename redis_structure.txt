@@ -29,6 +29,7 @@ CarNumber:LapNumber {
     Sector[1/2]SpeedTrap : Float
     FinishLineSpeedTrap : Float
     BackStraightSpeedTrap : Float
+    Deleted : Bool + Timestamp
 }
 
 CarNumber {
@@ -36,6 +37,9 @@ CarNumber {
     NumberOfPitstops : Int
     Position : Int
     Retired : true
+    FastestSector[1/2/3]: Str
+    FastestSpeed[1/2/FL]: Str
+    FastestLap: Str
 }
 
 Session {
