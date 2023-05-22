@@ -42,6 +42,7 @@ class Driver {
     }
     
     var laps: [String:Lap] = [:]
+    var FastestLap: Lap?
 
     // Live data, shows current status of any value
     var CurrentLap = "0"
@@ -60,19 +61,10 @@ class Driver {
     var Y: Int = 0
     var Z: Int = 0
     var trackStatus: Bool = false // On track or not
-    var LapTime: String = "-"
     var TyreAge: Int = 0
     var TyreType: String = "-"
-    var Sector1Time: String = "-"
-    var Sector2Time: String = "-"
-    var Sector3Time: String = "-"
     var PitIn: Bool = false
     var PitOut: Bool = false
-    var Sector1SpeedTrap: Int = 0
-    var Sector2SpeedTrap: Int = 0
-    var FinishLineSpeedTrap: Int = 0
-    var BackStraightSpeedTrap: Int = 0
-    var FastestLap: Lap?
     var FastestSector1: Int = 0
     var FastestSector2: Int = 0
     var FastestSector3: Int = 0

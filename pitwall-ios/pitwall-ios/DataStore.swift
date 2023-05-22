@@ -195,7 +195,6 @@ class DataStore: ObservableObject {
             case "LapTime":
                 driverObject.laps[data[1], setDefault: Lap()].LapTime = data[0] + "::\(timestamp)"
                 driverObject.laps[data[1], setDefault: Lap()].LapTimeInSeconds = convertLapTimeToFloat(time: data[0])
-                driverObject.LapTime = data[0]
                 
             case "Tyre":
                 driverObject.laps[data[2], setDefault: Lap()].TyreType = data[0] + "::\(timestamp)"
@@ -204,28 +203,21 @@ class DataStore: ObservableObject {
             case "SectorTime":
                 if data[1] == "1" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector1Time = data[0] + "::\(timestamp)"
-                    driverObject.Sector1Time = data[0]
                 } else if data[1] == "2" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector2Time = data[0] + "::\(timestamp)"
-                    driverObject.Sector2Time = data[0]
                 } else if data[1] == "3" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector3Time = data[0] + "::\(timestamp)"
-                    driverObject.Sector3Time = data[0]
                 }
                 
             case "Speed":
                 if data[0] == "Sector1SpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector1SpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.Sector1SpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "Sector2SpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].Sector2SpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.Sector2SpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "FinishLineSpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].FinishLineSpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.FinishLineSpeedTrap = Int(data[1]) ?? 0
                 } else if data[0] == "BackStraightSpeedTrap" {
                     driverObject.laps[data[2], setDefault: Lap()].BackStraightSpeedTrap = data[1] + "::\(timestamp)"
-                    driverObject.BackStraightSpeedTrap = Int(data[1]) ?? 0
                 }
                 
             case "PitIn":

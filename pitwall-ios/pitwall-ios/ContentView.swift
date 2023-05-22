@@ -23,7 +23,9 @@ struct ContentView: View {
                 
                 //SessionInfoView(country: "United States", raceName: "Miami International Autodrome", countryFlag: "🇺🇸", roundNum: "5", roundDate: "05 - 07 May", sessionName: "Sprint Race")
                 
-                QualiLeaderboardView(headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
+                LeaderboardView(headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"], sessionType: "QUALIFYING")
+                
+                //LeaderboardView(headersArray: ["Lap Time", "Gap", "Int", "Tyre", "Stops", "Pit", "Lap"], sessionType: "RACE")
 
                 //CarDataView()
                 
