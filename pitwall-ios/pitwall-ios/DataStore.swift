@@ -42,22 +42,22 @@ class DataStore: ObservableObject {
         
         var lapTimesSorted = [LapTimeStruct]()
         for driver in driverList {
-            let fastestLap = driverDatabase[driver]?.FastestLap ?? 0
-            
-            // The driver in 1st place crosses the finish line first. The rest of the drivers will have yet to register a lap
-            // time and their fastestLap will be 0. Hence, just append these drivers in the current order they are in.
-            if fastestLap == 0 {
+            let fastestLap = driverDatabase[driver]?.FastestLap
+            if let fastestLap = fastestLap {
+                let temp = fastestLap.LapTime.components(separatedBy: "::")
+                let timestamp = Double(temp[1]) ?? 0
+                let fastestLapTimeString = temp[0]
+                let parts = fastestLapTimeString.components(separatedBy: ":")
+                
+                let fastestLapTime = ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
+                lapTimesSorted.insertSorted(newItem: LapTimeStruct(driver: driver, time: fastestLapTime, timestamp: timestamp))
+            }
+            else {
+                // The driver in 1st place crosses the finish line first. The rest of the drivers will have yet to register a lap
+                // time and their fastestLap will be nil. Hence, just append these drivers in the current order they are in.
                 lapTimesSorted.append(LapTimeStruct(driver: driver, time: 0, timestamp: 0))
                 continue
             }
-            
-            let temp = driverDatabase[driver]?.laps[String(fastestLap)]?.LapTime.components(separatedBy: "::")
-            let timestamp = Double(temp?[1] ?? "") ?? 0
-            let fastestLapTimeString = temp?[0] ?? ""
-            let parts = fastestLapTimeString.components(separatedBy: ":")
-            
-            let fastestLapTime = ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
-            lapTimesSorted.insertSorted(newItem: LapTimeStruct(driver: driver, time: fastestLapTime, timestamp: timestamp))
         }
         
         var res = [String]()
@@ -106,14 +106,14 @@ class DataStore: ObservableObject {
             driverObject.NumberOfPitStops = data
         case "Position":
             driverObject.Position.append(Int(data) ?? 0)
-//            driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
-//            driverList.insert(driverObject.racingNum, at: (Int(data) ?? 0) - 1)
+            driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
+            driverList.insert(driverObject.racingNum, at: (Int(data) ?? 0) - 1)
         case "Retired":
             driverObject.Retired = true
         case "Fastest":
             let data = data.components(separatedBy: ",")
             if data[0] == "LapTime" {
-                driverObject.FastestLap = Int(data[1]) ?? 1
+                driverObject.FastestLap = driverObject.laps[data[1]] ?? Lap()
                 if sessionType != "RACE" {
                     driverList = sortByLapTime(driverList: driverList)
                 }

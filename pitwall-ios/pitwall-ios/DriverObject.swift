@@ -18,19 +18,19 @@ class Lap {
     var PositionData: [String] = []
     
     // Set once per lap
-    var LapTime: String = ""
+    var LapTime: String = "-"
     var LapTimeInSeconds: Float = 0
-    var TyreAge: String = ""
-    var TyreType: String = ""
-    var Sector1Time: String = ""
-    var Sector2Time: String = ""
-    var Sector3Time: String = ""
-    var Sector1SpeedTrap: String = ""
-    var Sector2SpeedTrap: String = ""
-    var FinishLineSpeedTrap: String = ""
-    var BackStraightSpeedTrap: String = ""
-    var PitIn: String = ""
-    var PitOut: String = ""
+    var TyreAge: String = "-"
+    var TyreType: String = "-"
+    var Sector1Time: String = "-"
+    var Sector2Time: String = "-"
+    var Sector3Time: String = "-"
+    var Sector1SpeedTrap: String = "-"
+    var Sector2SpeedTrap: String = "-"
+    var FinishLineSpeedTrap: String = "-"
+    var BackStraightSpeedTrap: String = "-"
+    var PitIn: String = "-"
+    var PitOut: String = "-"
     var Deleted: Bool = false
 }
 
@@ -72,7 +72,7 @@ class Driver {
     var Sector2SpeedTrap: Int = 0
     var FinishLineSpeedTrap: Int = 0
     var BackStraightSpeedTrap: Int = 0
-    var FastestLap: Int = 0
+    var FastestLap: Lap?
     var FastestSector1: Int = 0
     var FastestSector2: Int = 0
     var FastestSector3: Int = 0

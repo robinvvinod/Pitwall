@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "iosapp_test_52"
+    let consumerGroup = "iosapp_test_78"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps"]
     
     @StateObject var processor = DataProcessor(sessionType: "QUALIFYING", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"])
@@ -23,9 +23,9 @@ struct ContentView: View {
                 
                 //SessionInfoView(country: "United States", raceName: "Miami International Autodrome", countryFlag: "🇺🇸", roundNum: "5", roundDate: "05 - 07 May", sessionName: "Sprint Race")
                 
-                if flag {
-                    QualiLeaderboardView(headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
-                }
+                QualiLeaderboardView(headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
+
+                //CarDataView()
                 
                 Button("Connect to kafka") {
                     
@@ -48,7 +48,7 @@ struct ContentView: View {
                         }
                     }
                     
-                    Task(priority: .userInitiated) { // Starts processing of messages in queue
+                    Task(priority: .background) { // Starts processing of messages in queue
                         /*
                          If session is over, all processor data must be downloaded before processQueue is called.
                          Since processor would be downloading topic by topic, items may be inserted in any position into the dataQueue array, including before the current pointer of processQueue, leading to bad memory accesses or data being missed out
@@ -59,9 +59,8 @@ struct ContentView: View {
                          */
                         try await Task.sleep(for: .seconds(15))
                         kafka.listen = false
-                        await processor.processQueue()
+                        await processor.processQueueWithDelay(startPoint: 0)
                         print("Processing done")
-                        flag = true
                     }
                 }
                 
