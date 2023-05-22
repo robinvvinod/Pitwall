@@ -19,6 +19,7 @@ class Lap {
     
     // Set once per lap
     var LapTime: String = ""
+    var LapTimeInSeconds: Float = 0
     var TyreAge: String = ""
     var TyreType: String = ""
     var Sector1Time: String = ""
@@ -46,7 +47,7 @@ class Driver {
     var CurrentLap = "0"
     var NumberOfPitStops = "0"
     var Position: [Int] = []
-    var Retired = "false"
+    var Retired = false
     var GapToLeader: String = "-"
     var IntervalToPositionAhead: String = "-"
     var Speed: Int = 0
@@ -58,7 +59,7 @@ class Driver {
     var X: Int = 0
     var Y: Int = 0
     var Z: Int = 0
-    var trackStatus: Bool = false
+    var trackStatus: Bool = false // On track or not
     var LapTime: String = "-"
     var TyreAge: Int = 0
     var TyreType: String = "-"
@@ -71,6 +72,10 @@ class Driver {
     var Sector2SpeedTrap: Int = 0
     var FinishLineSpeedTrap: Int = 0
     var BackStraightSpeedTrap: Int = 0
+    var FastestLap: Int = 0
+    var FastestSector1: Int = 0
+    var FastestSector2: Int = 0
+    var FastestSector3: Int = 0
 }
 
 struct Session {

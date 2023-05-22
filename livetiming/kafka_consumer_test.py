@@ -2,27 +2,7 @@ from aiokafka import AIOKafkaConsumer
 import asyncio
 
 
-topics = [
-    "TyreAge",
-    "LapTime",
-    "CurrentLap",
-    "Tyre",
-    "GapToLeader",
-    "IntervalToPositionAhead",
-    "SectorTime",
-    "Speed",
-    "InPit",
-    "NumberOfPitStops",
-    "PitOut",
-    "CarData",
-    "PositionData",
-    "Position",
-    "Retired",
-    "TotalLaps",
-    "LapCount",
-    "SessionStatus",
-    "RCM",
-]
+topics = ["Fastest"]
 
 
 def deserializer(value) -> str:
@@ -36,7 +16,7 @@ async def consume():
         group_id=None,
         key_deserializer=deserializer,
         value_deserializer=deserializer,
-        consumer_timeout_ms=2000,
+        consumer_timeout_ms=200,
         auto_offset_reset="earliest"
     )
     # Get cluster layout and join group `my-group`

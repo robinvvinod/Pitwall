@@ -24,22 +24,21 @@ CarNumber:LapNumber {
     TyreType : Str
     LapTime : Str
     Sector[1/2/3]Time : Str
-    PitIn : Bool + Timestamp
-    PitOut : Bool + Timestamp
+    PitIn : Timestamp # If key exists, pit in this lap
+    PitOut : Timestamp # If key exists, pit out this lap
     Sector[1/2]SpeedTrap : Float
     FinishLineSpeedTrap : Float
     BackStraightSpeedTrap : Float
-    Deleted : Bool + Timestamp
+    Deleted : Timestamp # If key exists, lap was deleted
 }
 
 CarNumber {
     CurrentLap : Int
     NumberOfPitstops : Int
     Position : Int
-    Retired : true
-    FastestSector[1/2/3]: Str
-    FastestSpeed[1/2/FL]: Str
-    FastestLap: Str
+    Retired : Timestamp # If key exists, driver has retired
+    FastestLap: Float # Lap time is not stored in the normal string format
+    FastestSector[1/2/3]: Float
 }
 
 Session {

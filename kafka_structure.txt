@@ -17,7 +17,11 @@ Position {
 }
 
 Retired {
-    driver : true
+    driver : Timestamp
+}
+
+Fastest {
+    driver : [LapTime/Sector[1/2/3]],LapNumber
 }
 
 -----LAP SPECIFIC--------

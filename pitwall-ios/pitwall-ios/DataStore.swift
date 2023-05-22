@@ -7,25 +7,11 @@
 
 import Foundation
 
-// If key does not exist in dict, create it and set it to a default value
-extension Dictionary {
-    subscript(key: Key, setDefault defaultValue: @autoclosure () -> Value) -> Value {
-        mutating get {
-            return self[key] ?? {
-                let value = defaultValue()
-                self[key] = value
-                return value
-            }()
-        }
-    }
-}
-
 class DataStore: ObservableObject {
     
     var driverDatabase: [String:Driver] = [:]
     var sessionDatabase: Session = Session()
     
-    //var driverList = ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"] // Sorted according to position of driver
     var sessionType: String
     var driverList: [String]
     
@@ -37,6 +23,55 @@ class DataStore: ObservableObject {
         for driver in driverList {
             driverDatabase[driver] = Driver(racingNum: driver)
         }
+    }
+    
+    func sortByLapTime(driverList: [String]) -> [String] {
+        
+        struct LapTimeStruct: Comparable {
+            let driver: String
+            let time: Float
+            let timestamp: Double
+            
+            static func <(lhs: LapTimeStruct, rhs: LapTimeStruct) -> Bool {
+                if lhs.time == rhs.time {
+                    return lhs.timestamp < rhs.timestamp
+                }
+                return lhs.time < rhs.time
+            }
+        }
+        
+        var lapTimesSorted = [LapTimeStruct]()
+        for driver in driverList {
+            let fastestLap = driverDatabase[driver]?.FastestLap ?? 0
+            
+            // The driver in 1st place crosses the finish line first. The rest of the drivers will have yet to register a lap
+            // time and their fastestLap will be 0. Hence, just append these drivers in the current order they are in.
+            if fastestLap == 0 {
+                lapTimesSorted.append(LapTimeStruct(driver: driver, time: 0, timestamp: 0))
+                continue
+            }
+            
+            let temp = driverDatabase[driver]?.laps[String(fastestLap)]?.LapTime.components(separatedBy: "::")
+            let timestamp = Double(temp?[1] ?? "") ?? 0
+            let fastestLapTimeString = temp?[0] ?? ""
+            let parts = fastestLapTimeString.components(separatedBy: ":")
+            
+            let fastestLapTime = ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
+            lapTimesSorted.insertSorted(newItem: LapTimeStruct(driver: driver, time: fastestLapTime, timestamp: timestamp))
+        }
+        
+        var res = [String]()
+        for lapTime in lapTimesSorted {
+            res.append(lapTime.driver)
+        }
+        
+        return res
+        
+    }
+    
+    func convertLapTimeToFloat(time: String) -> Float {
+        let parts = time.components(separatedBy: ":")
+        return ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
     }
     
     func addSessionSpecificData(topic: String, key: String, value: String) -> () {
@@ -71,10 +106,25 @@ class DataStore: ObservableObject {
             driverObject.NumberOfPitStops = data
         case "Position":
             driverObject.Position.append(Int(data) ?? 0)
-            driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
-            driverList.insert(driverObject.racingNum, at: (Int(data) ?? 0) - 1)
+//            driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
+//            driverList.insert(driverObject.racingNum, at: (Int(data) ?? 0) - 1)
         case "Retired":
-            driverObject.Retired = data
+            driverObject.Retired = true
+        case "Fastest":
+            let data = data.components(separatedBy: ",")
+            if data[0] == "LapTime" {
+                driverObject.FastestLap = Int(data[1]) ?? 1
+                if sessionType != "RACE" {
+                    driverList = sortByLapTime(driverList: driverList)
+                }
+            } else if data[0] == "Sector1" {
+                driverObject.FastestSector1 = Int(data[1]) ?? 1
+            } else if data[0] == "Sector2" {
+                driverObject.FastestSector2 = Int(data[1]) ?? 1
+            } else {
+                driverObject.FastestSector3 = Int(data[1]) ?? 1
+            }
+            
         default:
             return
         }
@@ -101,6 +151,7 @@ class DataStore: ObservableObject {
                 driverObject.Throttle = Int(channels[3]) ?? 0
                 driverObject.Brake = Int(channels[4]) ?? 0
                 driverObject.DRS = Int(channels[5]) ?? 0
+                
             case "PositionData":
                 driverObject.laps[data[1], setDefault: Lap()].PositionData.append(data[0] + "::\(timestamp)")
                 let channels = data[0].components(separatedBy: ",")
@@ -124,6 +175,7 @@ class DataStore: ObservableObject {
             case "GapToLeader":
                 driverObject.laps[data[1], setDefault: Lap()].GapToLeader.append(data[0] + "::\(timestamp)")
                 driverObject.GapToLeader = data[0]
+                
             case "IntervalToPositionAhead":
                 driverObject.laps[data[1], setDefault: Lap()].IntervalToPositionAhead.append(data[0] + "::\(timestamp)")
                 driverObject.IntervalToPositionAhead = data[0]
@@ -142,6 +194,7 @@ class DataStore: ObservableObject {
                 
             case "LapTime":
                 driverObject.laps[data[1], setDefault: Lap()].LapTime = data[0] + "::\(timestamp)"
+                driverObject.laps[data[1], setDefault: Lap()].LapTimeInSeconds = convertLapTimeToFloat(time: data[0])
                 driverObject.LapTime = data[0]
                 
             case "Tyre":

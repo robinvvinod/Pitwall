@@ -19,7 +19,12 @@ class ProcessLiveData:
             instance of :class:`logging.Logger` (see: :mod:`logging`).
     """
 
-    def __init__(self, redis_url="localhost", kafka_url="localhost:9092"):
+    def __init__(
+        self,
+        startingPositions: list[int],
+        redis_url="localhost",
+        kafka_url="localhost:9092",
+    ):
         self._redis = redis.Redis(host=redis_url, decode_responses=True)
         self._kafka = aiokafka.AIOKafkaProducer(
             bootstrap_servers=kafka_url,
@@ -30,43 +35,24 @@ class ProcessLiveData:
 
         self.sessionStatus = None
         self.retiredDrivers = set()
+        self.startingPositions = startingPositions
 
-        driverNums = [
-            16,
-            1,
-            11,
-            55,
-            44,
-            14,
-            4,
-            22,
-            18,
-            81,
-            63,
-            23,
-            77,
-            2,
-            24,
-            20,
-            10,
-            21,
-            31,
-            27,
-        ]
-
+        # Assign a Kafka partition to each driver for this session
         self.partitionMap = {}
-        for i, item in enumerate(driverNums):
+        for i, item in enumerate(startingPositions):
             self.partitionMap[str(item).encode()] = i
 
     async def start(self):
         await self._redis.flushall()
+        for i, item in enumerate(self.startingPositions):
+            await self._redis.hset(name=str(item), key="Position", value=str(i + 1))
         await self._kafka.start()
 
     async def stop(self):
         await self._redis.bgsave()
         await self._kafka.stop()
 
-    def convertToTimestamp(self, timeStr) -> float:
+    def _convert_to_timestamp(self, timeStr) -> float:
         """F1 sends a non standard timestamp with all of their messages
         Some have varying precision of microseconds
         Some does not have microseconds at all
@@ -93,12 +79,29 @@ class ProcessLiveData:
             return 1
         return int(curLap.split("::")[0])
 
+    async def _get_fastest_lap(self, driver) -> float:
+        """Get fastest lap for any driver"""
+        fastest = await self._redis.hget(name=driver, key="FastestLap")
+        if fastest is None:
+            return float("inf")
+        return float(fastest)
+
+    async def _get_fastest_sector(self, driver, sector) -> float:
+        """Get fastest sector for any driver"""
+        fastest = await self._redis.hget(name=driver, key=f"FastestSector{sector}")
+        if fastest is None:
+            return float("inf")
+        return float(fastest)
+
     def _serializer(self, value) -> bytes:
         if not isinstance(value, str):
             value = str(value)
         return value.encode()
 
     def _paritioner(self, key_bytes, all_partitions, available_partitions):
+        """All 20 drivers have their own partition in any driver related Kafka topic
+        This ensures that message order is always preserved and allows for load-balacing
+        across multiple brokes"""
         if key_bytes in self.partitionMap:
             return self.partitionMap[key_bytes]
         return random.choice(all_partitions)
@@ -285,6 +288,25 @@ class ProcessLiveData:
                             )
                         )
 
+                        # Check if sector was faster than fastest sector and update accordingly
+                        fastestSector = await self._get_fastest_sector(
+                            driver, sectorNumber
+                        )
+                        if float(sectorTime) < fastestSector:
+                            await self._redis.hset(
+                                name=driver,
+                                key=f"FastestSector{sectorNumber}",
+                                value=sectorTime,
+                            )
+
+                            tasks.append(
+                                self._kafka.send(
+                                    topic="Fastest",
+                                    key=driver,
+                                    value=f"Sector{sectorNumber},{curLap}::{timestamp}",
+                                )
+                            )
+
                         # If driver has a sector 3 time, he has crossed the start/finish line
                         # LapTime is calculated from summing individual sectors
                         if sectorNumber == 3:
@@ -305,6 +327,22 @@ class ProcessLiveData:
                                     + float(sector2Time)
                                     + float(sectorTime)
                                 )
+                                lapTime = round(lapTime, 3)
+
+                                # Check if lap was faster than fastest lap and update accordingly
+                                fastestLap = await self._get_fastest_lap(driver)
+                                if lapTime < fastestLap:
+                                    await self._redis.hset(
+                                        name=driver, key="FastestLap", value=lapTime
+                                    )
+
+                                    tasks.append(
+                                        self._kafka.send(
+                                            topic="Fastest",
+                                            key=driver,
+                                            value=f"LapTime,{curLap}::{timestamp}",
+                                        )
+                                    )
 
                                 min = int(lapTime // 60)
                                 remainder = str(round(lapTime % 60, 3)).split(".")
@@ -351,8 +389,6 @@ class ProcessLiveData:
                                         value=f"{curLap + 1}::{timestamp}",
                                     )
                                 )
-
-                    # TODO: Process personal/overall fastest sectors
 
             if "Speeds" in msg[driver]:
                 for indvSpeed in msg[driver]["Speeds"]:
@@ -416,7 +452,7 @@ class ProcessLiveData:
                         self._redis.hset(
                             name=f"{driver}:{curLap}",
                             key="PitIn",
-                            value=f"true::{timestamp}",
+                            value=timestamp,
                         )
                     )
 
@@ -468,7 +504,7 @@ class ProcessLiveData:
                         self._redis.hset(
                             name=f"{driver}:{curLap}",
                             key="PitOut",
-                            value=f"true::{timestamp}",
+                            value=timestamp,
                         )
                     )
 
@@ -552,8 +588,9 @@ class ProcessLiveData:
                 )
             )
 
-        elif self._get_session_status(msg) == "Finished":
-            self.sessionStatus = "Finished"
+            await asyncio.gather(*tasks)
+
+        elif self._get_session_status(msg) == "Finalised":
             tasks.append(
                 self._redis.hset(name="Session", key="EndTime", value=timestamp)
             )
@@ -561,7 +598,11 @@ class ProcessLiveData:
                 self._kafka.send(topic="SessionStatus", key="EndTime", value=timestamp)
             )
 
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
+            # TODO: Add logic to shutdown server
+
+        elif self._get_session_status(msg) == "Aborted":
+            self.sessionStatus = "Aborted"
 
     def _get_session_status(self, d):
         """Find SessionStatus key inside a nested dictionary"""
@@ -587,7 +628,7 @@ class ProcessLiveData:
         if isinstance(msg, dict):
             for messageNum in msg:
                 data = msg[messageNum]
-                timestamp = self.convertToTimestamp(data["Utc"])
+                timestamp = self._convert_to_timestamp(data["Utc"])
 
                 if data["Category"] == "Other":
                     tasks.append(
@@ -633,7 +674,7 @@ class ProcessLiveData:
                                 self._redis.hset(
                                     name=f"{driver}:{lap}",
                                     key="Deleted",
-                                    value=f"true::{timestamp}",
+                                    value=timestamp,
                                 )
                             )
 
@@ -744,7 +785,7 @@ class ProcessLiveData:
         tasks = []
 
         for item in msg:
-            timestamp = self.convertToTimestamp(item["Utc"])
+            timestamp = self._convert_to_timestamp(item["Utc"])
 
             data = item["Cars"]
 
@@ -802,7 +843,7 @@ class ProcessLiveData:
         tasks = []
 
         for item in msg:
-            timestamp = self.convertToTimestamp(item["Timestamp"])
+            timestamp = self._convert_to_timestamp(item["Timestamp"])
 
             data = item["Entries"]
 
@@ -875,28 +916,23 @@ class ProcessLiveData:
             if "IsOut" in msg[driver]:
                 if msg[driver]["IsOut"] is True:
                     tasks.append(
-                        self._redis.hset(
-                            name=driver, key="Retired", value=f"true::{timestamp}"
-                        )
+                        self._redis.hset(name=driver, key="Retired", value=timestamp)
                     )
                     tasks.append(
-                        self._kafka.send(
-                            topic="Retired", key=driver, value=f"true::{timestamp}"
-                        )
+                        self._kafka.send(topic="Retired", key=driver, value=timestamp)
                     )
                     self.retiredDrivers.add(driver)
 
         asyncio.gather(*tasks)
 
     async def process(self, topic, msg, timestamp):
-        if self.sessionStatus == "Finished":
-            return
+        timestamp = self._convert_to_timestamp(timestamp)
 
-        timestamp = self.convertToTimestamp(timestamp)
-
-        if self.sessionStatus is None:
+        if (self.sessionStatus is None) or (self.sessionStatus == "Aborted"):
             if topic == "SessionData":
                 await self._process_session_data(msg, timestamp)
+            elif topic == "RaceControlMessages":
+                await self._process_race_control_messages(msg)
             return
 
         if topic == "CarData.z":
@@ -950,11 +986,8 @@ timings = []
 
 
 async def test():
-    Processor = ProcessLiveData()
+    Processor = ProcessLiveData(startingPositions=starting_pos)
     await Processor.start()
-
-    for i, item in enumerate(starting_pos):
-        await Processor._redis.hset(name=str(item), key="Position", value=str(i + 1))
 
     fileH = open("jsonStreams/Race/saved_data.txt", "r")
 
@@ -994,4 +1027,7 @@ asyncio.run(test())
 
 print(
     f"Median: {statistics.median(timings):.10f}ms\nMean: {statistics.mean(timings):.10f}ms\nStdDev: {statistics.pstdev(timings)}\n"
+)
+print(
+    f"1st percentile: {statistics.quantiles(timings, n=100)[0]}\n5th percentile: {statistics.quantiles(timings, n=100)[4]}\n95th percentile: {statistics.quantiles(timings, n=100)[94]}\n99th percentile: {statistics.quantiles(timings, n=100)[98]}"
 )
