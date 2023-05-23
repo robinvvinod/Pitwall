@@ -11,6 +11,14 @@ class Lap {
     // Historical data
     // All these values are strings as they contain timestamps attached
     
+    // Tyre type is only broadcast by backend whenever there is a change. Hence, when a new lap is created, value from previous lap
+    // has to be carried over. There is only a timestamp attached if the tyre was changed that lap
+    var TyreType: String
+    
+    init(TyreType: String) {
+        self.TyreType = TyreType
+    }
+    
     // Stream data
     var GapToLeader: [String] = []
     var IntervalToPositionAhead: [String] = []
@@ -19,9 +27,7 @@ class Lap {
     
     // Set once per lap
     var LapTime: String = "-"
-    var LapTimeInSeconds: Float = 0
     var TyreAge: String = "-"
-    var TyreType: String = "-"
     var Sector1Time: String = "-"
     var Sector2Time: String = "-"
     var Sector3Time: String = "-"
@@ -65,9 +71,11 @@ class Driver {
     var TyreType: String = "-"
     var PitIn: Bool = false
     var PitOut: Bool = false
-    var FastestSector1: Int = 0
-    var FastestSector2: Int = 0
-    var FastestSector3: Int = 0
+    
+    var FastestLapTime: Float = Float.greatestFiniteMagnitude
+    var FastestSector1: Float = Float.greatestFiniteMagnitude
+    var FastestSector2: Float = Float.greatestFiniteMagnitude
+    var FastestSector3: Float = Float.greatestFiniteMagnitude
 }
 
 struct Session {
@@ -76,5 +84,9 @@ struct Session {
     var StartTime = ""
     var EndTime = ""
     var RCM: [String] = []
+    var FastestLapTime: Float = Float.greatestFiniteMagnitude
+    var FastestSector1: Float = Float.greatestFiniteMagnitude
+    var FastestSector2: Float = Float.greatestFiniteMagnitude
+    var FastestSector3: Float = Float.greatestFiniteMagnitude
 }
 

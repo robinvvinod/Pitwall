@@ -21,7 +21,8 @@ Retired {
 }
 
 Fastest {
-    driver : [LapTime/Sector[1/2/3]],LapNumber
+    driver : LapTime,LapNumber
+    driver : Sector[1/2/3],SectorTime 
 }
 
 -----LAP SPECIFIC--------

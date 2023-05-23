@@ -37,8 +37,8 @@ CarNumber {
     NumberOfPitstops : Int
     Position : Int
     Retired : Timestamp # If key exists, driver has retired
-    FastestLap: Float # Lap time is not stored in the normal string format
-    FastestSector[1/2/3]: Float
+    FastestLap: Float # in seconds
+    FastestSector[1/2/3]: Float # in seconds
 }
 
 Session {

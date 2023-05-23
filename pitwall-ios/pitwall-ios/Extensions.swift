@@ -56,3 +56,24 @@ extension Dictionary {
         }
     }
 }
+
+func convertLapTimeToSeconds(time: String) -> Float {
+    if time.contains("::") {
+        return convertLapTimeToSeconds(time: time.components(separatedBy: "::")[0])
+    }
+    
+    let parts = time.components(separatedBy: ":")
+    if parts.count == 2 {
+        return ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
+    } else if parts.count == 1 {
+        return Float(parts[0]) ?? 0
+    } else {
+        return 0
+    }
+}
+
+extension FloatingPoint {
+    func isNearlyEqual(to value: Self) -> Bool {
+        return abs(self - value) <= .ulpOfOne
+    }
+}

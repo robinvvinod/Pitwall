@@ -72,6 +72,14 @@ class ProcessLiveData:
             timeStr = timeStr[:-1]
             return datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S").timestamp()
 
+    def _convertToSeconds(self, time) -> float:
+        """Convert min:seconds.milliseconds to seconds"""
+        if ":" in time:
+            time = time.split(":")
+            return (60 * time[0]) + float(time[1])
+        else:
+            return float(time)
+
     async def _get_current_lap(self, driver) -> int:
         """Get current lap any driver is on"""
         curLap = await self._redis.hget(name=driver, key="CurrentLap")
@@ -288,11 +296,12 @@ class ProcessLiveData:
                             )
                         )
 
+                        sectorTime = self._convertToSeconds(sectorTime)
                         # Check if sector was faster than fastest sector and update accordingly
                         fastestSector = await self._get_fastest_sector(
                             driver, sectorNumber
                         )
-                        if float(sectorTime) < fastestSector:
+                        if sectorTime < fastestSector:
                             await self._redis.hset(
                                 name=driver,
                                 key=f"FastestSector{sectorNumber}",
@@ -303,7 +312,7 @@ class ProcessLiveData:
                                 self._kafka.send(
                                     topic="Fastest",
                                     key=driver,
-                                    value=f"Sector{sectorNumber},{curLap}::{timestamp}",
+                                    value=f"Sector{sectorNumber},{sectorTime}::{timestamp}",
                                 )
                             )
 
@@ -323,9 +332,9 @@ class ProcessLiveData:
                                 sector2Time = sector2Time.split("::")[0]
 
                                 lapTime = (
-                                    float(sector1Time)
-                                    + float(sector2Time)
-                                    + float(sectorTime)
+                                    self._convertToSeconds(sector1Time)
+                                    + self._convertToSeconds(sector2Time)
+                                    + sectorTime
                                 )
                                 lapTime = round(lapTime, 3)
 
@@ -347,9 +356,9 @@ class ProcessLiveData:
                                 min = int(lapTime // 60)
                                 remainder = str(round(lapTime % 60, 3)).split(".")
                                 sec = remainder[0]
-                                ms = remainder[1][:3]
+                                ms = remainder[1]
 
-                                lapTime = f"{min}:{sec:0>2}.{ms}"
+                                lapTime = f"{min}:{sec:0>2}.{ms:0>3}"
 
                                 tasks.append(
                                     self._redis.hset(

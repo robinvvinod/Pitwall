@@ -46,17 +46,14 @@ class DataStore: ObservableObject {
             if let fastestLap = fastestLap {
                 let temp = fastestLap.LapTime.components(separatedBy: "::")
                 let timestamp = Double(temp[1]) ?? 0
-                let fastestLapTimeString = temp[0]
-                let parts = fastestLapTimeString.components(separatedBy: ":")
+                let fastestLapTime = convertLapTimeToSeconds(time: temp[0])
                 
-                let fastestLapTime = ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
                 lapTimesSorted.insertSorted(newItem: LapTimeStruct(driver: driver, time: fastestLapTime, timestamp: timestamp))
             }
             else {
                 // The driver in 1st place crosses the finish line first. The rest of the drivers will have yet to register a lap
                 // time and their fastestLap will be nil. Hence, just append these drivers in the current order they are in.
                 lapTimesSorted.append(LapTimeStruct(driver: driver, time: 0, timestamp: 0))
-                continue
             }
         }
         
@@ -68,12 +65,7 @@ class DataStore: ObservableObject {
         return res
         
     }
-    
-    func convertLapTimeToFloat(time: String) -> Float {
-        let parts = time.components(separatedBy: ":")
-        return ((Float(parts[0]) ?? 0) * 60) + (Float(parts[1]) ?? 0)
-    }
-    
+        
     func addSessionSpecificData(topic: String, key: String, value: String) -> () {
         switch topic {
         case "TotalLaps":
@@ -113,16 +105,31 @@ class DataStore: ObservableObject {
         case "Fastest":
             let data = data.components(separatedBy: ",")
             if data[0] == "LapTime" {
-                driverObject.FastestLap = driverObject.laps[data[1]] ?? Lap()
+                driverObject.FastestLap = driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)]
+                driverObject.FastestLapTime = convertLapTimeToSeconds(time: driverObject.FastestLap?.LapTime ?? "")
+                if driverObject.FastestLapTime < sessionDatabase.FastestLapTime {
+                    sessionDatabase.FastestLapTime = driverObject.FastestLapTime
+                }
+                
+                // In non-race sessions, leaderboard is sorted by fastest lap times.
                 if sessionType != "RACE" {
                     driverList = sortByLapTime(driverList: driverList)
                 }
             } else if data[0] == "Sector1" {
-                driverObject.FastestSector1 = Int(data[1]) ?? 1
+                driverObject.FastestSector1 = convertLapTimeToSeconds(time: data[1])
+                if driverObject.FastestSector1 < sessionDatabase.FastestSector1 {
+                    sessionDatabase.FastestSector1 = driverObject.FastestSector1
+                }
             } else if data[0] == "Sector2" {
-                driverObject.FastestSector2 = Int(data[1]) ?? 1
+                driverObject.FastestSector2 = convertLapTimeToSeconds(time: data[1])
+                if driverObject.FastestSector2 < sessionDatabase.FastestSector2 {
+                    sessionDatabase.FastestSector2 = driverObject.FastestSector2
+                }
             } else {
-                driverObject.FastestSector3 = Int(data[1]) ?? 1
+                driverObject.FastestSector3 = convertLapTimeToSeconds(time: data[1])
+                if driverObject.FastestSector3 < sessionDatabase.FastestSector3 {
+                    sessionDatabase.FastestSector3 = driverObject.FastestSector3
+                }
             }
             
         default:
@@ -143,7 +150,7 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "CarData":
-                driverObject.laps[data[1], setDefault: Lap()].CarData.append(data[0] + "::\(timestamp)")
+                driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)].CarData.append(data[0] + "::\(timestamp)")
                 let channels = data[0].components(separatedBy: ",")
                 driverObject.RPM = Int(channels[0]) ?? 0
                 driverObject.Speed = Int(channels[1]) ?? 0
@@ -153,7 +160,7 @@ class DataStore: ObservableObject {
                 driverObject.DRS = Int(channels[5]) ?? 0
                 
             case "PositionData":
-                driverObject.laps[data[1], setDefault: Lap()].PositionData.append(data[0] + "::\(timestamp)")
+                driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)].PositionData.append(data[0] + "::\(timestamp)")
                 let channels = data[0].components(separatedBy: ",")
                 if channels[0] == "OnTrack" {
                     driverObject.trackStatus = true
@@ -173,11 +180,11 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "GapToLeader":
-                driverObject.laps[data[1], setDefault: Lap()].GapToLeader.append(data[0] + "::\(timestamp)")
+                driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)].GapToLeader.append(data[0] + "::\(timestamp)")
                 driverObject.GapToLeader = data[0]
                 
             case "IntervalToPositionAhead":
-                driverObject.laps[data[1], setDefault: Lap()].IntervalToPositionAhead.append(data[0] + "::\(timestamp)")
+                driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)].IntervalToPositionAhead.append(data[0] + "::\(timestamp)")
                 driverObject.IntervalToPositionAhead = data[0]
             default:
                 return
@@ -189,49 +196,48 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "TyreAge":
-                driverObject.laps[data[2], setDefault: Lap()].TyreAge = data[0] + "::\(timestamp)"
+                driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].TyreAge = data[0] + "::\(timestamp)"
                 driverObject.TyreAge = Int(data[0]) ?? 0
                 
             case "LapTime":
-                driverObject.laps[data[1], setDefault: Lap()].LapTime = data[0] + "::\(timestamp)"
-                driverObject.laps[data[1], setDefault: Lap()].LapTimeInSeconds = convertLapTimeToFloat(time: data[0])
+                driverObject.laps[data[1], setDefault: Lap(TyreType: driverObject.TyreType)].LapTime = data[0] + "::\(timestamp)"
                 
             case "Tyre":
-                driverObject.laps[data[2], setDefault: Lap()].TyreType = data[0] + "::\(timestamp)"
                 driverObject.TyreType = data[0]
+                driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].TyreType = data[0] + "::\(timestamp)"
                 
             case "SectorTime":
                 if data[1] == "1" {
-                    driverObject.laps[data[2], setDefault: Lap()].Sector1Time = data[0] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].Sector1Time = data[0] + "::\(timestamp)"
                 } else if data[1] == "2" {
-                    driverObject.laps[data[2], setDefault: Lap()].Sector2Time = data[0] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].Sector2Time = data[0] + "::\(timestamp)"
                 } else if data[1] == "3" {
-                    driverObject.laps[data[2], setDefault: Lap()].Sector3Time = data[0] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].Sector3Time = data[0] + "::\(timestamp)"
                 }
                 
             case "Speed":
                 if data[0] == "Sector1SpeedTrap" {
-                    driverObject.laps[data[2], setDefault: Lap()].Sector1SpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].Sector1SpeedTrap = data[1] + "::\(timestamp)"
                 } else if data[0] == "Sector2SpeedTrap" {
-                    driverObject.laps[data[2], setDefault: Lap()].Sector2SpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].Sector2SpeedTrap = data[1] + "::\(timestamp)"
                 } else if data[0] == "FinishLineSpeedTrap" {
-                    driverObject.laps[data[2], setDefault: Lap()].FinishLineSpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].FinishLineSpeedTrap = data[1] + "::\(timestamp)"
                 } else if data[0] == "BackStraightSpeedTrap" {
-                    driverObject.laps[data[2], setDefault: Lap()].BackStraightSpeedTrap = data[1] + "::\(timestamp)"
+                    driverObject.laps[data[2], setDefault: Lap(TyreType: driverObject.TyreType)].BackStraightSpeedTrap = data[1] + "::\(timestamp)"
                 }
                 
             case "PitIn":
-                driverObject.laps[data[0], setDefault: Lap()].PitIn = "true" + "::\(timestamp)"
+                driverObject.laps[data[0], setDefault: Lap(TyreType: driverObject.TyreType)].PitIn = "true" + "::\(timestamp)"
                 driverObject.PitIn = true
                 driverObject.PitOut = false
                 
             case "PitOut":
-                driverObject.laps[data[0], setDefault: Lap()].PitOut = "true" + "::\(timestamp)"
+                driverObject.laps[data[0], setDefault: Lap(TyreType: driverObject.TyreType)].PitOut = "true" + "::\(timestamp)"
                 driverObject.PitOut = true
                 driverObject.PitIn = false
                 
             case "DeletedLaps":
-                driverObject.laps[data[0], setDefault: Lap()].Deleted = true
+                driverObject.laps[data[0], setDefault: Lap(TyreType: driverObject.TyreType)].Deleted = true
             default:
                 return
             }            

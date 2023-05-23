@@ -91,23 +91,13 @@ class DataProcessor: DataStore {
         }
     }
     
-    func processQueue() async -> () {
-        var count = 0
-        if dataQueue.isEmpty {
-            return
-        }
+    func processQueue(start: Int = 0) async -> () {
         dataQueue.sort{ $0 < $1 }
+        var count = start
         while true {
             if count > dataQueue.count - 1 {
-                if sessionDatabase.EndTime != "" {
-                    return // Session has ended and all messages in queue were processed
-                } else {
-                    /*
-                    If this condition is reached and it is not the last message for the session, retrieving of messages from Kafka
-                    is slower than the delay behind the live stream. TODO: Handle this case by notifying user about slow network.
-                    */
-                    return
-                }
+                dataQueue = []
+                return
             }
             
             let record = dataQueue[count]
