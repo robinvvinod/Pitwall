@@ -9,34 +9,33 @@ import Foundation
 
 class Lap {
     // Historical data
-    // All these values are strings as they contain timestamps attached
     
     // Tyre type is only broadcast by backend whenever there is a change. Hence, when a new lap is created, value from previous lap
     // has to be carried over. There is only a timestamp attached if the tyre was changed that lap
-    var TyreType: String
+    var TyreType: (value: String, timestamp: String)
     
-    init(TyreType: String) {
+    init(TyreType: (String, String)) {
         self.TyreType = TyreType
     }
     
     // Stream data
-    var GapToLeader: [String] = []
-    var IntervalToPositionAhead: [String] = []
-    var CarData: [String] = []
-    var PositionData: [String] = []
+    var GapToLeader: [(value: String, timestamp: String)] = []
+    var IntervalToPositionAhead: [(value: String, timestamp: String)] = []
+    var CarData: [(value: String, timestamp: String)] = []
+    var PositionData: [(value: String, timestamp: String)] = []
     
     // Set once per lap
-    var LapTime: String = "-"
-    var TyreAge: String = "-"
-    var Sector1Time: String = "-"
-    var Sector2Time: String = "-"
-    var Sector3Time: String = "-"
-    var Sector1SpeedTrap: String = "-"
-    var Sector2SpeedTrap: String = "-"
-    var FinishLineSpeedTrap: String = "-"
-    var BackStraightSpeedTrap: String = "-"
-    var PitIn: String = "-"
-    var PitOut: String = "-"
+    var LapTime: (value: String, timestamp: String) = ("-", "")
+    var TyreAge: (value: Int, timestamp: String) = (0, "")
+    var Sector1Time: (value: String, timestamp: String) = ("-", "")
+    var Sector2Time: (value: String, timestamp: String) = ("-", "")
+    var Sector3Time: (value: String, timestamp: String) = ("-", "")
+    var Sector1SpeedTrap: (value: Int, timestamp: String) = (0, "")
+    var Sector2SpeedTrap: (value: Int, timestamp: String) = (0, "")
+    var FinishLineSpeedTrap: (value: Int, timestamp: String) = (0, "")
+    var BackStraightSpeedTrap: (value: Int, timestamp: String) = (0, "")
+    var PitIn: (value: Bool, timestamp: String) = (false, "")
+    var PitOut: (value: Bool, timestamp: String) = (false, "")
     var Deleted: Bool = false
 }
 

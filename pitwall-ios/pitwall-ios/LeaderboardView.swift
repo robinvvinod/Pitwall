@@ -75,19 +75,19 @@ struct LeaderboardView: View {
                     ForEach(0..<processor.driverList.count, id: \.self) { j in
                         
                         // Lap object is retrieved for the fastest lap of given driver
-                        let fastestLap = processor.driverDatabase[processor.driverList[j]]?.FastestLap ?? Lap(TyreType: "-")
+                        let fastestLap = processor.driverDatabase[processor.driverList[j]]?.FastestLap ?? Lap(TyreType: ("-", ""))
                         
                         HStack { // HStack in case any column has more than 1 data point inside. E.g) Tyre
                             switch headersArray[i] {
                             // Each item has a timestamp attached that needs to be filtered
                             case "Lap Time":
-                                Text("\(fastestLap.LapTime.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.LapTime.value)")
                                     .padding(8)
                                     .foregroundColor(Color.white)
                                 
                             case "Gap":
                                 if j != 0 {
-                                    let gap = String(format: "%.3f", (convertLapTimeToSeconds(time: fastestLap.LapTime) - processor.sessionDatabase.FastestLapTime))
+                                    let gap = String(format: "%.3f", (convertLapTimeToSeconds(time: fastestLap.LapTime.value) - processor.sessionDatabase.FastestLapTime))
                                     Text("+\(gap)")
                                         .padding(8)
                                         .foregroundColor(Color.white)
@@ -98,20 +98,20 @@ struct LeaderboardView: View {
                                 }
                                 
                             case "Tyre":
-                                Text("\(fastestLap.TyreAge.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.TyreAge.value)")
                                     .padding(.vertical, 8)
                                     .padding(.leading, 8)
                                     .foregroundColor(Color.white)
-                                Text("\(fastestLap.TyreType)")
+                                Text("\(fastestLap.TyreType.value)")
                                     .padding(.vertical, 8)
                                     .padding(.trailing, 8)
                                     .foregroundColor(Color.white)
                                 
                             case "Sector 1":
                                 let driverFastestSector = processor.driverDatabase[processor.driverList[j]]?.FastestSector1 ?? 0
-                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector1Time)
+                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector1Time.value)
                                 
-                                Text("\(fastestLap.Sector1Time.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.Sector1Time.value)")
                                         .foregroundColor(Color.white)
                                         .padding(.vertical, 2)
                                         .padding(.horizontal, 8)
@@ -121,9 +121,9 @@ struct LeaderboardView: View {
                                 
                             case "Sector 2":
                                 let driverFastestSector = processor.driverDatabase[processor.driverList[j]]?.FastestSector2 ?? 0
-                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector2Time)
+                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector2Time.value)
                                 
-                                Text("\(fastestLap.Sector2Time.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.Sector2Time.value)")
                                         .foregroundColor(Color.white)
                                         .padding(.vertical, 2)
                                         .padding(.horizontal, 8)
@@ -133,9 +133,9 @@ struct LeaderboardView: View {
                                 
                             case "Sector 3":
                                 let driverFastestSector = processor.driverDatabase[processor.driverList[j]]?.FastestSector3 ?? 0
-                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector3Time)
+                                let curSector = convertLapTimeToSeconds(time: fastestLap.Sector3Time.value)
                                 
-                                Text("\(fastestLap.Sector3Time.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.Sector3Time.value)")
                                         .foregroundColor(Color.white)
                                         .padding(.vertical, 2)
                                         .padding(.horizontal, 8)
@@ -144,17 +144,17 @@ struct LeaderboardView: View {
                                         .padding(.vertical, 6)
                                 
                             case "ST1":
-                                Text("\(fastestLap.Sector1SpeedTrap.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.Sector1SpeedTrap.value)")
                                     .padding(8)
                                     .foregroundColor(Color.white)
                                 
                             case "ST2":
-                                Text("\(fastestLap.Sector2SpeedTrap.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.Sector2SpeedTrap.value)")
                                     .padding(8)
                                     .foregroundColor(Color.white)
                                 
                             case "ST3":
-                                Text("\(fastestLap.FinishLineSpeedTrap.components(separatedBy: "::")[0])")
+                                Text("\(fastestLap.FinishLineSpeedTrap.value)")
                                     .padding(8)
                                     .foregroundColor(Color.white)
                                 
