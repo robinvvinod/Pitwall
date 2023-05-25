@@ -10,15 +10,14 @@ import SwiftUI
 struct LeaderboardView: View {
     
     @EnvironmentObject var processor: DataProcessor
-    let headersArray: [String] // Order of items in headersArray controls the order of columns in the view. User preference
-    let sessionType: String
+    private let headersArray: [String] // Order of items in headersArray controls the order of columns in the view. User preference
         
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             sortedDriverListView // VStack column of all driver numbers, sorted according to fastest lap times/race position
             // Columns to the right of sortedDriverListView are horizontally scrollable
             ScrollView(.horizontal, showsIndicators: false) {
-                if sessionType != "RACE" {
+                if processor.sessionType != "RACE" {
                     nonRaceLeaderboardView // HStack of VStack columns, sorted by lap times
                 } else {
                     leaderboardView // HStack of VStack columns, sorted by race position

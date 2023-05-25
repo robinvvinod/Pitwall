@@ -10,7 +10,7 @@ import Charts
 
 struct SpeedTraceView: View {
     
-    var carData: [[Double]]
+    private var carData: [[Double]]
     
     var body: some View {
         Chart {

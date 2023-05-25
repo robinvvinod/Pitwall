@@ -25,6 +25,7 @@
 		003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */; };
 		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
+		005998F12A1DB56200A20410 /* GapToPositionAheadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapToPositionAheadView.swift */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +68,7 @@
 		003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTraceView.swift; sourceTree = "<group>"; };
 		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		005998F02A1DB56200A20410 /* GapToPositionAheadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapToPositionAheadView.swift; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -120,6 +122,7 @@
 			children = (
 				000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */,
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
+				005998F02A1DB56200A20410 /* GapToPositionAheadView.swift */,
 				0047DCD32A1B360700E0C259 /* Extensions.swift */,
 				003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */,
 				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
@@ -294,6 +297,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */,
+				005998F12A1DB56200A20410 /* GapToPositionAheadView.swift in Sources */,
 				003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */,
 				00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */,
 				003AE4272A179D4200B8EA6C /* CarDataView.swift in Sources */,

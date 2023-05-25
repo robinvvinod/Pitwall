@@ -89,9 +89,9 @@ class DataStore: ObservableObject {
 
         switch topic {
         case "CurrentLap":
-            driverObject.CurrentLap = data
+            driverObject.CurrentLap = Int(data) ?? 0
         case "NumberOfPitStops":
-            driverObject.NumberOfPitStops = data
+            driverObject.NumberOfPitStops = Int(data) ?? 0
         case "Position":
             driverObject.Position.append(Int(data) ?? 0)
             driverList.remove(at: driverList.firstIndex(of: driverObject.racingNum) ?? 0)
@@ -176,11 +176,15 @@ class DataStore: ObservableObject {
             
             switch topic {
             case "GapToLeader":
-                driverObject.laps[data[1], setDefault: Lap(TyreType: (driverObject.TyreType,""))].GapToLeader.append((data[0], timestamp))
+                var gap = data[0]
+                gap.remove(at: gap.startIndex)
+                driverObject.laps[data[1], setDefault: Lap(TyreType: (driverObject.TyreType,""))].GapToLeader.append((value: Float(gap) ?? 0, timestamp: timestamp))
                 driverObject.GapToLeader = data[0]
                 
             case "IntervalToPositionAhead":
-                driverObject.laps[data[1], setDefault: Lap(TyreType: (driverObject.TyreType,""))].IntervalToPositionAhead.append((data[0], timestamp))
+                var interval = data[0]
+                interval.remove(at: interval.startIndex)
+                driverObject.laps[data[1], setDefault: Lap(TyreType: (driverObject.TyreType,""))].IntervalToPositionAhead.append((value: Float(interval) ?? 0, timestamp: timestamp))
                 driverObject.IntervalToPositionAhead = data[0]
             default:
                 return

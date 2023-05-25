@@ -19,8 +19,8 @@ class Lap {
     }
     
     // Stream data
-    var GapToLeader: [(value: String, timestamp: String)] = []
-    var IntervalToPositionAhead: [(value: String, timestamp: String)] = []
+    var GapToLeader: [(value: Float, timestamp: String)] = []
+    var IntervalToPositionAhead: [(value: Float, timestamp: String)] = []
     var CarData: [(value: String, timestamp: String)] = []
     var PositionData: [(value: String, timestamp: String)] = []
     
@@ -50,8 +50,8 @@ class Driver {
     var FastestLap: Lap?
 
     // Live data, shows current status of any value
-    var CurrentLap = "0"
-    var NumberOfPitStops = "0"
+    var CurrentLap: Int = 0
+    var NumberOfPitStops: Int = 0
     var Position: [Int] = []
     var Retired = false
     var GapToLeader: String = "-"

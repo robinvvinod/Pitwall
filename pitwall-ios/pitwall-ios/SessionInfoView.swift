@@ -10,12 +10,12 @@ import SwiftUI
 struct SessionInfoView: View {
     
     @EnvironmentObject var processor: DataProcessor
-    var country: String
-    var raceName: String
-    var countryFlag: String
-    var roundNum: String
-    var roundDate: String
-    var sessionName: String
+    private var country: String
+    private var raceName: String
+    private var countryFlag: String
+    private var roundNum: String
+    private var roundDate: String
+    private var sessionName: String
     
     var body: some View {
         ZStack(alignment: .topLeading) {
