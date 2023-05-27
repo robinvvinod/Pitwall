@@ -65,9 +65,9 @@ class DataStore: ObservableObject {
     func addSessionSpecificData(topic: String, key: String, value: String) -> () {
         switch topic {
         case "TotalLaps":
-            sessionDatabase.TotalLaps = value
+            sessionDatabase.TotalLaps = Int(value) ?? 0
         case "LapCount":
-            sessionDatabase.CurrentLap = value
+            sessionDatabase.CurrentLap = Int(value) ?? 0
         case "SessionStatus":
             if key == "StartTime" {
                 sessionDatabase.StartTime = value

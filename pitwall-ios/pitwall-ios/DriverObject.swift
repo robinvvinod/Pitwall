@@ -78,8 +78,8 @@ class Driver {
 }
 
 struct Session {
-    var CurrentLap = "0"
-    var TotalLaps = "0"
+    var CurrentLap: Int = 0
+    var TotalLaps: Int = 1
     var StartTime = ""
     var EndTime = ""
     var RCM: [String] = []

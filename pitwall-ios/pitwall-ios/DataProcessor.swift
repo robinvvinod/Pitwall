@@ -39,19 +39,21 @@ class DataProcessor: DataStore {
         }
     }
     
-    func processQueueWithDelay(startPoint: Int) async -> () {
+    func processQueueWithDelay(startPoint: Int) async throws -> () {
         var count = startPoint
         if dataQueue.isEmpty {
             return
         }
         dataQueue.sort{ $0 < $1 }
-        var delay: Double = 0
+        var overallDelay: Double = 0
+        var sleepTime: Double = 0
+        let startTime = DispatchTime.now()
+        let dispatchQueue = DispatchQueue(label: "processingDispatchQueue", qos: .userInitiated)
         while true {
             // No delay in processing first message in queue
             if count == startPoint {
                 let record = dataQueue[count]
                 await MainActor.run(body: {
-//                    print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
                     if carSpecific.contains(record.topic) {
                         addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
                     } else if sessionSpecific.contains(record.topic) {
@@ -74,9 +76,11 @@ class DataProcessor: DataStore {
                     }
                 }
                 
-                let record = dataQueue[count]                
-                delay += dataQueue[count].timestamp - dataQueue[count - 1].timestamp
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [self] in
+                let record = dataQueue[count]
+                sleepTime = dataQueue[count].timestamp - dataQueue[count - 1].timestamp
+                overallDelay += sleepTime
+                dispatchQueue.asyncAfter(deadline: startTime + overallDelay) { [self] in // TODO: Remove reduction of delay
+//                    print("topic: \(record.topic) key: \(record.key) value: \(record.value)")
                     if carSpecific.contains(record.topic) {
                         addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
                     } else if sessionSpecific.contains(record.topic) {
@@ -84,10 +88,18 @@ class DataProcessor: DataStore {
                     } else {
                         addLapSpecificData(topic: record.topic, driver: record.key, value: record.value)
                     }
-                    objectWillChange.send()
+                    DispatchQueue.main.async {
+                        self.objectWillChange.send()
+                    }
                 }
             }
             count += 1
+            
+            if sleepTime > 0 {
+                try await Task.sleep(until: .now + .seconds(sleepTime * 0.9), tolerance: .nanoseconds(1), clock: .continuous)
+
+            }
+            
         }
     }
     
