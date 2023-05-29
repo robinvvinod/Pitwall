@@ -10,7 +10,7 @@ import SwiftUI
 struct LeaderboardView: View {
     
     @EnvironmentObject var processor: DataProcessor
-    private let headersArray: [String] // Order of items in headersArray controls the order of columns in the view. User preference
+    let headersArray: [String] // Order of items in headersArray controls the order of columns in the view. User preference
         
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -78,7 +78,6 @@ struct LeaderboardView: View {
                         
                         HStack { // HStack in case any column has more than 1 data point inside. E.g) Tyre
                             switch headersArray[i] {
-                            // Each item has a timestamp attached that needs to be filtered
                             case "Lap Time":
                                 Text("\(fastestLap.LapTime.value)")
                                     .padding(8)
@@ -243,11 +242,5 @@ struct LeaderboardView: View {
                 }.fixedSize(horizontal: true, vertical: false) // Allows each row item to scale horizontally
             }
         }
-    }
-}
-
-struct NonRaceLeaderboardView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }

@@ -98,9 +98,3 @@ struct SessionInfoView: View {
         .padding()
     }
 }
-
-struct SessionInfoView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
-}

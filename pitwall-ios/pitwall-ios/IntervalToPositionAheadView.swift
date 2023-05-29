@@ -1,5 +1,5 @@
 //
-//  IntervalToPositionAheadView.swift
+//  GapOrIntervalView.swift
 //  pitwall-ios
 //
 //  Created by Robin on 24/5/23.
@@ -8,9 +8,10 @@
 import SwiftUI
 import Charts
 
-struct IntervalToPositionAheadView: View {
+struct GapOrIntervalView: View {
     
     let driver: String
+    let type: String // Set to "GAP" or "INT" representing GapToLeader or IntervalToPositionAhead respectively
     @EnvironmentObject var processor: DataProcessor
     @State private var intervalsArray = [(lap: Int, gap: Float)]()
     
@@ -29,11 +30,11 @@ struct IntervalToPositionAheadView: View {
                     Text("Gap: -")
                 }
             }
-            intervalToPositionAheadView
+            gapOrIntervalView
         }.padding()
     }
     
-    var intervalToPositionAheadView: some View {
+    var gapOrIntervalView: some View {
         Chart {
             if intervalsArray.count <= 3 {
                 ForEach(0..<intervalsArray.count, id: \.self) { index in
@@ -75,10 +76,10 @@ struct IntervalToPositionAheadView: View {
             }
         }
         .onReceive(processor.objectWillChange) {
-            intervalsArray = getIntervalToPositionAhead(driver: driver)
+            intervalsArray = getGapOrInterval(driver: driver)
         }
         .onAppear {
-            intervalsArray = getIntervalToPositionAhead(driver: driver)
+            intervalsArray = getGapOrInterval(driver: driver)
         }
         .chartOverlay { chart in
             GeometryReader { geometry in
@@ -121,23 +122,22 @@ struct IntervalToPositionAheadView: View {
         .chartXScale(domain: 0...curLap)
     }
     
-    func getIntervalToPositionAhead(driver: String) -> [(lap: Int, gap: Float)] {
+    func getGapOrInterval(driver: String) -> [(lap: Int, gap: Float)] {
         var intervalsArray = [(lap: Int, gap: Float)]()
         guard let driverObject = processor.driverDatabase[driver] else {return intervalsArray}
         if driverObject.CurrentLap == 0 {
             return intervalsArray
         }
         for lap in 1..<(driverObject.CurrentLap) {
-            let gap = driverObject.laps[String(lap)]?.IntervalToPositionAhead.last ?? (0, "")
-            intervalsArray.append((lap: lap, gap: gap.value))
+            if type == "GAP" {
+                let gap = driverObject.laps[String(lap)]?.GapToLeader.last ?? (0, "")
+                intervalsArray.append((lap: lap, gap: gap.value))
+            } else {
+                let gap = driverObject.laps[String(lap)]?.IntervalToPositionAhead.last ?? (0, "")
+                intervalsArray.append((lap: lap, gap: gap.value))
+            }
         }
         curLap = driverObject.CurrentLap
         return intervalsArray
-    }
-}
-
-struct IntervalToPositionAheadView_Previews: PreviewProvider {
-    static var previews: some View {
-        IntervalToPositionAheadView(driver: "14")
     }
 }

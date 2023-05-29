@@ -10,6 +10,8 @@ import Charts
 
 struct SpeedTraceView: View {
     
+    var driver: [String]
+    var lap: [String]
     private var carData: [[Double]]
     
     var body: some View {
@@ -21,9 +23,3 @@ struct SpeedTraceView: View {
     }
 
 }
-
-//struct SpeedTraceView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        SpeedTraceView()
-//    }
-//}

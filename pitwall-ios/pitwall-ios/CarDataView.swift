@@ -9,12 +9,12 @@ import SwiftUI
 
 struct CarDataView: View {
     
+    var driver: String
     @EnvironmentObject var processor: DataProcessor
     
     var body: some View {
                 
         HStack(alignment: .top) {
-        
             HStack(spacing: 0) {
                 Text("Throttle")
                     .rotationEffect(.degrees(-90))
@@ -30,10 +30,10 @@ struct CarDataView: View {
                         
                         Rectangle()
                             .fill(Color.green)
-                            .frame(width: 25, height: CGFloat(processor.driverDatabase["14"]!.Throttle))
+                            .frame(width: 25, height: CGFloat(processor.driverDatabase[driver]?.Throttle ?? 0))
                         
                     }
-                    Text("\(processor.driverDatabase["14"]!.Throttle)")
+                    Text("\(processor.driverDatabase[driver]?.Throttle ?? 0)")
                         .font(.caption)
                 }
             }
@@ -52,33 +52,33 @@ struct CarDataView: View {
                             .frame(width: 25, height: 100)
                         
                         Rectangle()
-                            .trim(from: 0, to: processor.driverDatabase["14"]!.Brake == 100 ? 1 : 0)
+                            .trim(from: 0, to: processor.driverDatabase[driver]?.Brake == 100 ? 1 : 0)
                             .fill(Color.red)
                             .frame(width: 25, height: 100)
                         
                     }
-                    Text("\(processor.driverDatabase["14"]!.Brake)")
+                    Text("\(processor.driverDatabase[driver]?.Brake ?? 0)")
                         .font(.caption)
                 }
             }
             
             VStack(spacing: 0) {
                 
-                Text("\(processor.driverDatabase["14"]!.Speed)")
+                Text("\(processor.driverDatabase[driver]?.Speed ?? 0)")
                     .font(.title3)
                
-                Text("\(processor.driverDatabase["14"]!.RPM)")
+                Text("\(processor.driverDatabase[driver]?.RPM ?? 0)")
                     .font(.title3)
                 
-                Text("\(processor.driverDatabase["14"]!.Gear)")
+                Text("\(processor.driverDatabase[driver]?.Gear ?? 0)")
                     .font(.title3)
                 
                 RoundedRectangle(cornerRadius: 25)
-                    .fill(processor.driverDatabase["14"]!.DRS >= 10 ? Color.green : Color.green.opacity(0.2))
+                    .fill(processor.driverDatabase[driver]?.DRS ?? 0 >= 10 ? Color.green : Color.green.opacity(0.2))
                     .frame(width: 50, height: 20)
                     .overlay(
                         Text("DRS")
-                            .foregroundColor(processor.driverDatabase["14"]!.DRS >= 10 ? Color.white : Color.white.opacity(0.2))
+                            .foregroundColor(processor.driverDatabase[driver]?.DRS ?? 0 >= 10 ? Color.white : Color.white.opacity(0.2))
                             .font(.caption)
                     )
                     .padding(.top, 5)
@@ -104,9 +104,3 @@ struct CarDataView: View {
     }
 
 }
-
-//struct CarDataView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        CarDataView()
-//    }
-//}
