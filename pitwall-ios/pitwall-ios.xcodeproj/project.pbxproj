@@ -18,6 +18,7 @@
 		000CFFCA2A0104A700AAF530 /* pitwall_iosUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFC92A0104A700AAF530 /* pitwall_iosUITests.swift */; };
 		000CFFCC2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */; };
 		000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */; };
+		00112E532A24CC8800D8BAF8 /* LapComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */; };
 		0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0022E7902A03EF170030BB29 /* DataProcessor.swift */; };
 		003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */; };
 		003AE4252A179C8F00B8EA6C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */; };
@@ -25,7 +26,7 @@
 		003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */; };
 		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
-		005998F12A1DB56200A20410 /* IntervalToPositionAheadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* IntervalToPositionAheadView.swift */; };
+		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 		00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DDE4F82A2223520022585E /* LapHistoryView.swift */; };
 /* End PBXBuildFile section */
@@ -62,6 +63,7 @@
 		000CFFC92A0104A700AAF530 /* pitwall_iosUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITests.swift; sourceTree = "<group>"; };
 		000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KafkaConsumer.swift; sourceTree = "<group>"; };
+		00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapComparisonView.swift; sourceTree = "<group>"; };
 		0022E7902A03EF170030BB29 /* DataProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataProcessor.swift; sourceTree = "<group>"; };
 		003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionInfoView.swift; sourceTree = "<group>"; };
 		003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
@@ -69,7 +71,7 @@
 		003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTraceView.swift; sourceTree = "<group>"; };
 		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
-		005998F02A1DB56200A20410 /* IntervalToPositionAheadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalToPositionAheadView.swift; sourceTree = "<group>"; };
+		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 		00DDE4F82A2223520022585E /* LapHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapHistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -124,13 +126,14 @@
 			children = (
 				000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */,
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
-				005998F02A1DB56200A20410 /* IntervalToPositionAheadView.swift */,
+				005998F02A1DB56200A20410 /* GapOrIntervalView.swift */,
 				0047DCD32A1B360700E0C259 /* Extensions.swift */,
 				003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */,
 				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
 				003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */,
 				003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */,
 				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
+				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
 				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
@@ -300,8 +303,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */,
-				005998F12A1DB56200A20410 /* IntervalToPositionAheadView.swift in Sources */,
+				005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */,
 				003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */,
+				00112E532A24CC8800D8BAF8 /* LapComparisonView.swift in Sources */,
 				00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */,
 				003AE4272A179D4200B8EA6C /* CarDataView.swift in Sources */,
 				000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */,

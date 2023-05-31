@@ -35,7 +35,7 @@ struct ContentView: View {
                 if flag {
                     LapHistoryView(driver: "14", headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
                 }
-                    
+                                                    
                 Button("Connect to kafka") {
                     
                     let kafka = KafkaConsumer(DataProcessor: processor)
