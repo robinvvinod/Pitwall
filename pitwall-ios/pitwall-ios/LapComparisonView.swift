@@ -11,9 +11,7 @@ import Combine
 
 struct LapComparisonView: View {
 
-    @State private var cars = Cars()
     @State private var camera = Camera()
-    @State private var duration: Double = 0
     
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
     @State private var prevY: Double = 0
@@ -23,12 +21,7 @@ struct LapComparisonView: View {
     private let yModifier: Float = 0.0001
     
     var body: some View {
-        Button("MOVE") {
-            duration = 10
-            cars.car1.x += 1
-        }
-        
-        ARViewContainer(camera: $camera, cars: $cars, duration: $duration)
+        ARViewContainer(camera: $camera, car1Pos: CarPositions(positions: [(1,0,2)]), car2Pos: CarPositions(positions: [(1,0,1.8)]))
             .gesture(
                 DragGesture()
                     .onChanged { translate in
@@ -85,46 +78,78 @@ struct LapComparisonView: View {
 struct ARViewContainer: UIViewRepresentable {
     
     @Binding var camera: Camera
-    @Binding var cars: Cars
-    @Binding var duration: Double
+    var car1Pos: CarPositions
+    var car2Pos: CarPositions
     
     func makeUIView(context: Context) -> ARView {
-        
-        let arView = CustomARView(frame: .zero, camera: camera)
-        arView.cameraMode = .nonAR
-        arView.automaticallyConfigureSession = false
-        arView.debugOptions = .showWorldOrigin
-
-        let newAnchor = AnchorEntity(world: [0, 0, 0])
-        let newSphere = ModelEntity(mesh: .generateSphere(radius: 0.3))
-        newAnchor.addChild(newSphere)
-        arView.scene.anchors.append(newAnchor)
-        
-        let cameraAnchor = AnchorEntity(world: [camera.x, camera.y, camera.z])
-        let perspectiveCamera = PerspectiveCamera()
-        cameraAnchor.addChild(perspectiveCamera)
-        arView.scene.anchors.append(cameraAnchor)
-                                            
-        return arView
-
+        return CustomARView(frame: .zero, camera: camera, car1Pos: car1Pos, car2Pos: car2Pos)
     }
     
-    func updateUIView(_ uiView: ARView, context: Context) {
-        uiView.scene.anchors[0].move(to: Transform(translation: [cars.car1.x, 0, cars.car1.y]), relativeTo: nil, duration: duration)
-    }
+    func updateUIView(_ uiView: ARView, context: Context) {}
 }
 
 class CustomARView: ARView {
     
-    private var subscription: AnyCancellable?
-        
-    required init(frame: CGRect, camera: Camera) {
+    private var sceneUpdateSubscription: AnyCancellable?
+    private var car1AnimationSub: AnyCancellable?
+    private var car2AnimationSub: AnyCancellable?
+    private var car1Pos: CarPositions
+    private var car2Pos: CarPositions
+            
+    required init(frame: CGRect, camera: Camera, car1Pos: CarPositions, car2Pos: CarPositions) {
+        self.car1Pos = car1Pos
+        self.car2Pos = car2Pos
         super.init(frame: frame)
+
+        super.cameraMode = .nonAR
+        super.automaticallyConfigureSession = false
+        super.debugOptions = .showWorldOrigin
+
+        let car1Anchor = AnchorEntity(world: [0, 0, 0])
+        let car1 = ModelEntity(mesh: .generateSphere(radius: 0.3))
+        car1Anchor.addChild(car1)
+        super.scene.anchors.append(car1Anchor)
         
-        subscription = scene.publisher(for: SceneEvents.Update.self, on: nil).sink(receiveValue: { _ in
-            super.scene.anchors[1].move(to: Transform(translation: [camera.x, camera.y, camera.z]), relativeTo: super.scene.anchors[0])
-            super.scene.anchors[1].look(at: super.scene.anchors[0].position(relativeTo: nil), from: super.scene.anchors[1].position(relativeTo: nil), upVector: [0, 1, 0], relativeTo: nil)
+        let car2Anchor = AnchorEntity(world: [0, 0, 0])
+        let car2 = ModelEntity(mesh: .generateSphere(radius: 0.3))
+        car2Anchor.addChild(car2)
+        super.scene.anchors.append(car2Anchor)
+        
+        // Camera follows car1 by default, where car1 is the faster car
+        let cameraAnchor = AnchorEntity(world: [camera.x, camera.y, camera.z])
+        let perspectiveCamera = PerspectiveCamera()
+        cameraAnchor.addChild(perspectiveCamera)
+        super.scene.anchors.append(cameraAnchor)
+        
+        sceneUpdateSubscription = scene.publisher(for: SceneEvents.Update.self, on: nil).sink(receiveValue: { _ in
+            perspectiveCamera.move(to: Transform(translation: [camera.x, camera.y, camera.z]), relativeTo: car1)
+            perspectiveCamera.look(at: car1.position(relativeTo: nil), from: perspectiveCamera.position(relativeTo: nil), upVector: [0, 1, 0], relativeTo: nil)
         })
+        
+        car1AnimationSub = scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: car1).sink(receiveValue: { _ in
+            // Check if all movements are already done
+            if self.car1Pos.count == self.car1Pos.positions.count - 1 {
+                self.car1AnimationSub = nil
+                return
+            }
+            self.nextMove(model: car1, car: self.car1Pos)
+        })
+        
+        car2AnimationSub = scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: car2).sink(receiveValue: { _ in
+            // Check if all movements are already done
+            if self.car2Pos.count == self.car2Pos.positions.count - 1 {
+                self.car2AnimationSub = nil
+                return
+            }
+            self.nextMove(model: car2, car: self.car2Pos)
+        })
+        
+        self.nextMove(model: car1, car: self.car1Pos)
+        self.nextMove(model: car2, car: self.car2Pos)
+    }
+    
+    private func nextMove(model: ModelEntity, car: CarPositions) {
+        model.move(to: Transform(translation: [car.positions[car.count].x, 0, car.positions[car.count].y]), relativeTo: nil, duration: car.positions[car.count].duration, timingFunction: .linear)
     }
     
     @MainActor required dynamic init(frame frameRect: CGRect) {
@@ -143,13 +168,7 @@ class Camera {
     var z: Float = 3
 }
 
-struct Cars {
-    struct Car {
-        // Stores the x, y coords of cars
-        var x: Float = 0
-        var y: Float = 0
-    }
-    
-    var car1 = Car()
-    var car2 = Car()
+struct CarPositions {
+    let positions: [(x: Float, y: Float, duration: Double)]
+    var count: Int = 0
 }
