@@ -9,10 +9,27 @@ import SwiftUI
 import RealityKit
 import Combine
 
+class Camera {
+    // Stores the x, y and z angles for the camera
+    var x: Float = 0
+    var y: Float = 0.5
+    var z: Float = 3
+}
+
+class CarPositions {
+    var positions: [(x: Float, y: Float, z: Float, duration: Double)] = [(0,0,0,0)]
+    var count: Int = 0
+}
+
 struct LapComparisonView: View {
 
+    @EnvironmentObject var processor: DataProcessor
+    let selectedDriverAndLaps: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int))
+    @State var car1Pos = CarPositions()
+    @State var car2Pos = CarPositions()
+    @State var flag: Bool = false
+        
     @State private var camera = Camera()
-    
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
     @State private var prevY: Double = 0
     @State private var zSign: Bool = true // true is +ve z, false is -ve z
@@ -21,7 +38,41 @@ struct LapComparisonView: View {
     private let yModifier: Float = 0.0001
     
     var body: some View {
-        ARViewContainer(camera: $camera, car1Pos: CarPositions(positions: [(1,0,2)]), car2Pos: CarPositions(positions: [(1,0,1.8)]))
+        if flag {
+            arView
+        } else {
+            VStack {}.onAppear {
+                getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
+                getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
+                flag = true
+            }
+        }
+    }
+    
+    private func getRawPositions(driver: String, lap: Int, dataStore: CarPositions) {
+        let posData = processor.driverDatabase[driver]?.laps[String(lap)]?.PositionData ?? []
+        if posData.count == 0 {
+            return
+        }
+        for i in 0...(posData.count - 1) {
+            let coords = posData[i].value.components(separatedBy: ",")
+            if coords[0] == "OnTrack" {
+                let x = (Float(coords[1]) ?? 0) / 10
+                let y = (Float(coords[3]) ?? 0) / 10
+                let z = (Float(coords[2]) ?? 0) / 10
+                
+                if i == 0 {
+                    dataStore.positions.removeFirst()
+                    dataStore.positions.append((x: x, y: y, z: z, duration: Double(0)))
+                } else {
+                    dataStore.positions.append((x: x, y: y, z: z, duration: (posData[i].timestamp - posData[i-1].timestamp)))
+                }
+            }
+        }
+    }
+    
+    var arView: some View {
+        ARViewContainer(camera: $camera, car1Pos: car1Pos, car2Pos: car2Pos)
             .gesture(
                 DragGesture()
                     .onChanged { translate in
@@ -73,102 +124,4 @@ struct LapComparisonView: View {
                     }
             )
     }
-}
-
-struct ARViewContainer: UIViewRepresentable {
-    
-    @Binding var camera: Camera
-    var car1Pos: CarPositions
-    var car2Pos: CarPositions
-    
-    func makeUIView(context: Context) -> ARView {
-        return CustomARView(frame: .zero, camera: camera, car1Pos: car1Pos, car2Pos: car2Pos)
-    }
-    
-    func updateUIView(_ uiView: ARView, context: Context) {}
-}
-
-class CustomARView: ARView {
-    
-    private var sceneUpdateSubscription: AnyCancellable?
-    private var car1AnimationSub: AnyCancellable?
-    private var car2AnimationSub: AnyCancellable?
-    private var car1Pos: CarPositions
-    private var car2Pos: CarPositions
-            
-    required init(frame: CGRect, camera: Camera, car1Pos: CarPositions, car2Pos: CarPositions) {
-        self.car1Pos = car1Pos
-        self.car2Pos = car2Pos
-        super.init(frame: frame)
-
-        super.cameraMode = .nonAR
-        super.automaticallyConfigureSession = false
-        super.debugOptions = .showWorldOrigin
-
-        let car1Anchor = AnchorEntity(world: [0, 0, 0])
-        let car1 = ModelEntity(mesh: .generateSphere(radius: 0.3))
-        car1Anchor.addChild(car1)
-        super.scene.anchors.append(car1Anchor)
-        
-        let car2Anchor = AnchorEntity(world: [0, 0, 0])
-        let car2 = ModelEntity(mesh: .generateSphere(radius: 0.3))
-        car2Anchor.addChild(car2)
-        super.scene.anchors.append(car2Anchor)
-        
-        // Camera follows car1 by default, where car1 is the faster car
-        let cameraAnchor = AnchorEntity(world: [camera.x, camera.y, camera.z])
-        let perspectiveCamera = PerspectiveCamera()
-        cameraAnchor.addChild(perspectiveCamera)
-        super.scene.anchors.append(cameraAnchor)
-        
-        sceneUpdateSubscription = scene.publisher(for: SceneEvents.Update.self, on: nil).sink(receiveValue: { _ in
-            perspectiveCamera.move(to: Transform(translation: [camera.x, camera.y, camera.z]), relativeTo: car1)
-            perspectiveCamera.look(at: car1.position(relativeTo: nil), from: perspectiveCamera.position(relativeTo: nil), upVector: [0, 1, 0], relativeTo: nil)
-        })
-        
-        car1AnimationSub = scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: car1).sink(receiveValue: { _ in
-            // Check if all movements are already done
-            if self.car1Pos.count == self.car1Pos.positions.count - 1 {
-                self.car1AnimationSub = nil
-                return
-            }
-            self.nextMove(model: car1, car: self.car1Pos)
-        })
-        
-        car2AnimationSub = scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: car2).sink(receiveValue: { _ in
-            // Check if all movements are already done
-            if self.car2Pos.count == self.car2Pos.positions.count - 1 {
-                self.car2AnimationSub = nil
-                return
-            }
-            self.nextMove(model: car2, car: self.car2Pos)
-        })
-        
-        self.nextMove(model: car1, car: self.car1Pos)
-        self.nextMove(model: car2, car: self.car2Pos)
-    }
-    
-    private func nextMove(model: ModelEntity, car: CarPositions) {
-        model.move(to: Transform(translation: [car.positions[car.count].x, 0, car.positions[car.count].y]), relativeTo: nil, duration: car.positions[car.count].duration, timingFunction: .linear)
-    }
-    
-    @MainActor required dynamic init(frame frameRect: CGRect) {
-        fatalError("init(frame:) has not been implemented")
-    }
-
-    @MainActor required dynamic init?(coder decoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
-class Camera {
-    // Stores the x, y and z angles for the camera
-    var x: Float = 0
-    var y: Float = 0.5
-    var z: Float = 3
-}
-
-struct CarPositions {
-    let positions: [(x: Float, y: Float, duration: Double)]
-    var count: Int = 0
 }

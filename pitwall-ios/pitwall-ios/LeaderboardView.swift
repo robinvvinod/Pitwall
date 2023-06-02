@@ -74,7 +74,7 @@ struct LeaderboardView: View {
                     ForEach(0..<processor.driverList.count, id: \.self) { j in
                         
                         // Lap object is retrieved for the fastest lap of given driver
-                        let fastestLap = processor.driverDatabase[processor.driverList[j]]?.FastestLap ?? Lap(TyreType: ("-", ""))
+                        let fastestLap = processor.driverDatabase[processor.driverList[j]]?.FastestLap ?? Lap(TyreType: ("-", 0))
                         
                         HStack { // HStack in case any column has more than 1 data point inside. E.g) Tyre
                             switch headersArray[i] {

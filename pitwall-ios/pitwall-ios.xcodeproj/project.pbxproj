@@ -27,6 +27,7 @@
 		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
 		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
+		0094DDB62A296F1200E37522 /* CustomARView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0094DDB52A296F1200E37522 /* CustomARView.swift */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 		00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DDE4F82A2223520022585E /* LapHistoryView.swift */; };
 /* End PBXBuildFile section */
@@ -72,6 +73,7 @@
 		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
+		0094DDB52A296F1200E37522 /* CustomARView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomARView.swift; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 		00DDE4F82A2223520022585E /* LapHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapHistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -104,6 +106,7 @@
 		000CFF9D2A0104A600AAF530 = {
 			isa = PBXGroup;
 			children = (
+				0094DDB52A296F1200E37522 /* CustomARView.swift */,
 				000CFFA82A0104A600AAF530 /* pitwall-ios */,
 				000CFFBE2A0104A700AAF530 /* pitwall-iosTests */,
 				000CFFC82A0104A700AAF530 /* pitwall-iosUITests */,
@@ -306,6 +309,7 @@
 				005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */,
 				003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */,
 				00112E532A24CC8800D8BAF8 /* LapComparisonView.swift in Sources */,
+				0094DDB62A296F1200E37522 /* CustomARView.swift in Sources */,
 				00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */,
 				003AE4272A179D4200B8EA6C /* CarDataView.swift in Sources */,
 				000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */,

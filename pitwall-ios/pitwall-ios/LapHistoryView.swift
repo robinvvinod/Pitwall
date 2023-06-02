@@ -64,7 +64,7 @@ struct LapHistoryView: View {
                     
                     ForEach(1...(processor.driverDatabase[driver]?.CurrentLap ?? 1), id: \.self) { j in
                         HStack { // HStack in case any column has more than 1 data point inside. E.g) Tyre
-                            let lap = processor.driverDatabase[driver]?.laps[String(j)] ?? Lap(TyreType: ("", ""))
+                            let lap = processor.driverDatabase[driver]?.laps[String(j)] ?? Lap(TyreType: ("", 0))
                             switch headersArray[i] {
                             case "Lap Time":
                                 let driverFastestLap = processor.driverDatabase[driver]?.FastestLapTime ?? 0

@@ -12,30 +12,30 @@ class Lap {
     
     // Tyre type is only broadcast by backend whenever there is a change. Hence, when a new lap is created, value from previous lap
     // has to be carried over. There is only a timestamp attached if the tyre was changed that lap
-    var TyreType: (value: String, timestamp: String)
+    var TyreType: (value: String, timestamp: Double)
     
-    init(TyreType: (String, String)) {
+    init(TyreType: (String, Double)) {
         self.TyreType = TyreType
     }
     
     // Stream data
-    var GapToLeader: [(value: Float, timestamp: String)] = []
-    var IntervalToPositionAhead: [(value: Float, timestamp: String)] = []
-    var CarData: [(value: String, timestamp: String)] = []
-    var PositionData: [(value: String, timestamp: String)] = []
+    var GapToLeader: [(value: Float, timestamp: Double)] = []
+    var IntervalToPositionAhead: [(value: Float, timestamp: Double)] = []
+    var CarData: [(value: String, timestamp: Double)] = []
+    var PositionData: [(value: String, timestamp: Double)] = []
     
     // Set once per lap
-    var LapTime: (value: String, timestamp: String) = ("-", "")
-    var TyreAge: (value: Int, timestamp: String) = (0, "")
-    var Sector1Time: (value: String, timestamp: String) = ("-", "")
-    var Sector2Time: (value: String, timestamp: String) = ("-", "")
-    var Sector3Time: (value: String, timestamp: String) = ("-", "")
-    var Sector1SpeedTrap: (value: Int, timestamp: String) = (0, "")
-    var Sector2SpeedTrap: (value: Int, timestamp: String) = (0, "")
-    var FinishLineSpeedTrap: (value: Int, timestamp: String) = (0, "")
-    var BackStraightSpeedTrap: (value: Int, timestamp: String) = (0, "")
-    var PitIn: (value: Bool, timestamp: String) = (false, "")
-    var PitOut: (value: Bool, timestamp: String) = (false, "")
+    var LapTime: (value: String, timestamp: Double) = ("-", 0)
+    var TyreAge: (value: Int, timestamp: Double) = (0, 0)
+    var Sector1Time: (value: String, timestamp: Double) = ("-", 0)
+    var Sector2Time: (value: String, timestamp: Double) = ("-", 0)
+    var Sector3Time: (value: String, timestamp: Double) = ("-", 0)
+    var Sector1SpeedTrap: (value: Int, timestamp: Double) = (0, 0)
+    var Sector2SpeedTrap: (value: Int, timestamp: Double) = (0, 0)
+    var FinishLineSpeedTrap: (value: Int, timestamp: Double) = (0, 0)
+    var BackStraightSpeedTrap: (value: Int, timestamp: Double) = (0, 0)
+    var PitIn: (value: Bool, timestamp: Double) = (false, 0)
+    var PitOut: (value: Bool, timestamp: Double) = (false, 0)
     var Deleted: Bool = false
 }
 

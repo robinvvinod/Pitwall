@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "iosapp_test_239"
+    let consumerGroup = "iosapp_test_241"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps"]
     
     @StateObject var processor = DataProcessor(sessionType: "QUALIFYING", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"])
@@ -32,8 +32,12 @@ struct ContentView: View {
                 //CarDataView()
                 
                 //GapOrIntervalView(driver: "14", type: "GAP")
+                
+//                LapHistoryView(driver: "14", headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
+                
                 if flag {
-                    LapHistoryView(driver: "14", headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
+                    LapComparisonView(selectedDriverAndLaps: (("1", 30), ("14", 30)))
+                        .frame(width: 500, height: 500)
                 }
                                                     
                 Button("Connect to kafka") {

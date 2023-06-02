@@ -13,9 +13,8 @@ struct pitwall_iosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LapComparisonView()
-//            ContentView()
-//                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            ContentView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
 }

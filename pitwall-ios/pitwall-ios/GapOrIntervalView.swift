@@ -130,10 +130,10 @@ struct GapOrIntervalView: View {
         }
         for lap in 1..<(driverObject.CurrentLap) {
             if type == "GAP" {
-                let gap = driverObject.laps[String(lap)]?.GapToLeader.last ?? (0, "")
+                let gap = driverObject.laps[String(lap)]?.GapToLeader.last ?? (0, 0)
                 intervalsArray.append((lap: lap, gap: gap.value))
             } else {
-                let gap = driverObject.laps[String(lap)]?.IntervalToPositionAhead.last ?? (0, "")
+                let gap = driverObject.laps[String(lap)]?.IntervalToPositionAhead.last ?? (0, 0)
                 intervalsArray.append((lap: lap, gap: gap.value))
             }
         }
