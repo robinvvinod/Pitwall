@@ -35,25 +35,31 @@ class CustomARView: ARView {
         self.car2Pos = car2Pos
         super.init(frame: frame)
 
-        super.cameraMode = .nonAR
-        super.automaticallyConfigureSession = false
-        super.debugOptions = .showWorldOrigin
+        self.cameraMode = .nonAR
+        self.automaticallyConfigureSession = false
+        self.debugOptions = .showWorldOrigin
+        self.renderOptions = [.disableMotionBlur,
+                              .disableDepthOfField,
+                              .disablePersonOcclusion,
+                              .disableGroundingShadows,
+                              .disableFaceMesh,
+                              .disableHDR]
 
         let car1Anchor = AnchorEntity(world: [0, 0, 0])
-        let car1 = ModelEntity(mesh: .generateSphere(radius: 0.3))
+        let car1 = ModelEntity(mesh: .generateBox(size: 0.03))
         car1Anchor.addChild(car1)
-        super.scene.anchors.append(car1Anchor)
+        self.scene.addAnchor(car1Anchor)
         
         let car2Anchor = AnchorEntity(world: [0, 0, 0])
-        let car2 = ModelEntity(mesh: .generateSphere(radius: 0.3))
+        let car2 = ModelEntity(mesh: .generateBox(size: 0.03))
         car2Anchor.addChild(car2)
-        super.scene.anchors.append(car2Anchor)
+        self.scene.addAnchor(car2Anchor)
         
         // Camera follows car1 by default, where car1 is the faster car
         let cameraAnchor = AnchorEntity(world: [camera.x, camera.y, camera.z])
         let perspectiveCamera = PerspectiveCamera()
         cameraAnchor.addChild(perspectiveCamera)
-        super.scene.anchors.append(cameraAnchor)
+        self.scene.addAnchor(cameraAnchor)
         
         sceneUpdateSubscription = scene.publisher(for: SceneEvents.Update.self, on: nil).sink(receiveValue: { _ in
             perspectiveCamera.move(to: Transform(translation: [camera.x, camera.y, camera.z]), relativeTo: car1)
@@ -68,7 +74,7 @@ class CustomARView: ARView {
                 self.nextMove(model: car1, car: self.car1Pos)
             }
         })
-        
+                
         car2AnimationSub = scene.publisher(for: AnimationEvents.PlaybackCompleted.self, on: car2).sink(receiveValue: { _ in
             // Check if all movements are already done
             if self.car2Pos.count == self.car2Pos.positions.count {
@@ -83,9 +89,39 @@ class CustomARView: ARView {
     }
     
     private func nextMove(model: ModelEntity, car: CarPositions) {
-        // x and y coords are swapped between F1 live data and RealityKit
-        model.move(to: Transform(translation: [car.positions[car.count].x, car.positions[car.count].z, car.positions[car.count].y]), relativeTo: nil, duration: car.positions[car.count].duration, timingFunction: .linear)
+        model.move(to: Transform(translation: [car.positions[car.count].x, car.positions[car.count].y, car.positions[car.count].z]), relativeTo: nil, duration: car.positions[car.count].duration, timingFunction: .linear)
         car.count += 1
+    }
+    
+    private func tracePath(prev: (x: Float, y: Float, z: Float, duration: Double), now: (x: Float, y: Float, z: Float, duration: Double), color: UIColor) {
+            
+        let position1 = SIMD3(x: prev.x, y: prev.y, z: prev.z)
+        let position2 = SIMD3(x: now.x, y: now.y, z: now.z)
+        
+        let midPosition = SIMD3(x:(position1.x + position2.x) / 2,
+                                y:(position1.y + position2.y) / 2,
+                                z:(position1.z + position2.z) / 2)
+            
+        let anchor = AnchorEntity()
+        anchor.position = midPosition
+        anchor.look(at: position1, from: midPosition, relativeTo: nil)
+        
+        let meters = simd_distance(position1, position2)
+        
+        let lineMaterial = SimpleMaterial.init(color: color,
+                                               roughness: 1,
+                                               isMetallic: false)
+        
+        let bottomLineMesh = MeshResource.generateBox(width:0.025,
+                                                      height: 0.01,
+                                                      depth: meters)
+        
+        let bottomLineEntity = ModelEntity(mesh: bottomLineMesh,
+                                           materials: [lineMaterial])
+        
+        bottomLineEntity.position = .init(0, 0.025, 0)
+        anchor.addChild(bottomLineEntity)
+        self.scene.addAnchor(anchor)
     }
     
     @MainActor required dynamic init(frame frameRect: CGRect) {

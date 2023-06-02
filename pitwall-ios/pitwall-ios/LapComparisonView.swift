@@ -12,8 +12,8 @@ import Combine
 class Camera {
     // Stores the x, y and z angles for the camera
     var x: Float = 0
-    var y: Float = 0.5
-    var z: Float = 3
+    var y: Float = 0.05
+    var z: Float = 0.3
 }
 
 class CarPositions {
@@ -33,7 +33,7 @@ struct LapComparisonView: View {
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
     @State private var prevY: Double = 0
     @State private var zSign: Bool = true // true is +ve z, false is -ve z
-    private let radius: Float = 3 // Radius of rotation of camera around y-axis
+    private let radius: Float = 0.3 // Radius of rotation of camera around y-axis
     private let xModifier: Float = 0.05 // Scales gesture distance to change in coords of camera
     private let yModifier: Float = 0.0001
     
@@ -44,6 +44,10 @@ struct LapComparisonView: View {
             VStack {}.onAppear {
                 getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
                 getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
+//                print(car1Pos.positions)
+//                car2Pos = interpolate(reference: car1Pos, target: car2Pos)
+//                car1Pos = interpolate(reference: car2Pos, target: car1Pos)
+//                print(car1Pos.positions.count, car2Pos.positions.count)
                 flag = true
             }
         }
@@ -57,9 +61,9 @@ struct LapComparisonView: View {
         for i in 0...(posData.count - 1) {
             let coords = posData[i].value.components(separatedBy: ",")
             if coords[0] == "OnTrack" {
-                let x = (Float(coords[1]) ?? 0) / 10
-                let y = (Float(coords[3]) ?? 0) / 10
-                let z = (Float(coords[2]) ?? 0) / 10
+                let x = (Float(coords[1]) ?? 0) / 100
+                let y = (Float(coords[3]) ?? 0) / 100 // y and z coords are swapped between F1 live data and RealityKit
+                let z = (Float(coords[2]) ?? 0) / 100
                 
                 if i == 0 {
                     dataStore.positions.removeFirst()
@@ -69,6 +73,34 @@ struct LapComparisonView: View {
                 }
             }
         }
+    }
+    
+    private func interpolate(reference: CarPositions, target: CarPositions) -> CarPositions {
+        let res = CarPositions()
+        var count = 0
+        var referenceTimestamp: Double = 0
+        var targetTimestamp: Double = 0
+        for position in reference.positions {
+            if count == target.positions.count {
+                break
+            }
+            
+            referenceTimestamp += position.duration
+            for i in count...(target.positions.count - 1) {
+                targetTimestamp += target.positions[i].duration
+                if targetTimestamp > referenceTimestamp {
+                    let interpolatedX = target.positions[i].x - ((target.positions[i].x - target.positions[i-1].x)/2)
+                    let interpolatedY = target.positions[i].y - ((target.positions[i].y - target.positions[i-1].y)/2)
+                    let interpolatedZ = target.positions[i].z - ((target.positions[i].z - target.positions[i-1].z)/2)
+                    res.positions.append((x: interpolatedX, y: interpolatedY, z: interpolatedZ, duration: position.duration))
+                } else {
+                    res.positions.append(target.positions[i])
+                }
+                count += 1
+            }
+        }
+        
+        return res
     }
     
     var arView: some View {
@@ -115,8 +147,8 @@ struct LapComparisonView: View {
                         
                         if camera.y > radius {
                             camera.y = radius
-                        } else if camera.y < 0.5 {
-                            camera.y = 0.5
+                        } else if camera.y < 0.05 {
+                            camera.y = 0.05
                         }
                         
                         // If zSign is -ve, camera is "behind" the point of reference and camera.z should be negative
