@@ -8,47 +8,47 @@
 import SwiftUI
 import RealityKit
 import Combine
+import SceneKit
 
-class Camera {
-    // Stores the x, y and z angles for the camera
+class CameraPosition {
+    // Stores the x, y and z angles for the cameraPos
     var x: Float = 0
-    var y: Float = 0.05
-    var z: Float = 0.3
+    var y: Float = 0
+    var z: Float = 5.0
 }
 
 class CarPositions {
-    var positions: [(x: Float, y: Float, z: Float, duration: Double)] = [(0,0,0,0)]
+    var positions: [(x: Float, y: Float, z: Float, duration: Double)] = []
     var count: Int = 0
 }
 
 struct LapComparisonView: View {
-
-    @EnvironmentObject var processor: DataProcessor
+    
     let selectedDriverAndLaps: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int))
+    
+    @EnvironmentObject var processor: DataProcessor
     @State var car1Pos = CarPositions()
     @State var car2Pos = CarPositions()
-    @State var flag: Bool = false
-        
-    @State private var camera = Camera()
+    @State var cameraPos = CameraPosition()
+
+    @State var dataLoaded: Bool = false
+    
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
     @State private var prevY: Double = 0
     @State private var zSign: Bool = true // true is +ve z, false is -ve z
-    private let radius: Float = 0.3 // Radius of rotation of camera around y-axis
-    private let xModifier: Float = 0.05 // Scales gesture distance to change in coords of camera
+    private let radius: Float = 5 // Radius of rotation of cameraPos around y-axis
+    private let xModifier: Float = 0.05 // Scales gesture distance to change in coords of cameraPos
     private let yModifier: Float = 0.0001
     
     var body: some View {
-        if flag {
-            arView
+        if dataLoaded {
+            sceneView
         } else {
-            VStack {}.onAppear {
-                getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
-                getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
-//                print(car1Pos.positions)
-//                car2Pos = interpolate(reference: car1Pos, target: car2Pos)
-//                car1Pos = interpolate(reference: car2Pos, target: car1Pos)
-//                print(car1Pos.positions.count, car2Pos.positions.count)
-                flag = true
+            VStack {}
+                .onAppear {
+                    getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
+                    getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
+                    dataLoaded = true
             }
         }
     }
@@ -66,7 +66,6 @@ struct LapComparisonView: View {
                 let z = (Float(coords[2]) ?? 0) / 100
                 
                 if i == 0 {
-                    dataStore.positions.removeFirst()
                     dataStore.positions.append((x: x, y: y, z: z, duration: Double(0)))
                 } else {
                     dataStore.positions.append((x: x, y: y, z: z, duration: (posData[i].timestamp - posData[i-1].timestamp)))
@@ -103,56 +102,57 @@ struct LapComparisonView: View {
         return res
     }
     
-    var arView: some View {
-        ARViewContainer(camera: $camera, car1Pos: car1Pos, car2Pos: car2Pos)
+    var sceneView: some View {
+        let scene = ComparisonScene(car1Pos: car1Pos, car2Pos: car2Pos, cameraPos: cameraPos)
+        return SceneView(scene: scene, options: [.rendersContinuously], delegate: scene)
             .gesture(
                 DragGesture()
                     .onChanged { translate in
-                        
+
                         if translate.translation.width > prevX { // Moving to the east
-                            camera.x += zSign ? xModifier : -xModifier // controls direction of magnitude change of camera.x
+                            cameraPos.x += zSign ? xModifier : -xModifier // controls direction of magnitude change of cameraPos.x
                         } else {
-                            camera.x += zSign ? -xModifier : xModifier
+                            cameraPos.x += zSign ? -xModifier : xModifier
                         }
-                        
+
                         if translate.translation.height > prevY { // Moving to the north
-                            camera.y += yModifier * Float(abs(translate.translation.height - prevY))
+                            cameraPos.y += yModifier * Float(abs(translate.translation.height - prevY))
                         } else {
-                            camera.y -= yModifier * Float(abs(translate.translation.height - prevY))
+                            cameraPos.y -= yModifier * Float(abs(translate.translation.height - prevY))
                         }
-                        
+
                         prevX = translate.translation.width
-                        
+
                         /*
-                            This block ensures that camera.x is always within [-radius, radius]
-                            If camera.x > radius, camera.x will decrease until -radius
-                            If camera.x < -radius, camera.x will increase until radius
+                            This block ensures that cameraPos.x is always within [-radius, radius]
+                            If cameraPos.x > radius, cameraPos.x will decrease until -radius
+                            If cameraPos.x < -radius, cameraPos.x will increase until radius
                             Direction of change is determined by zSign
-                         
-                            This allows for "rolling" over of camera.x when crossing boundary points
+
+                            This allows for "rolling" over of cameraPos.x when crossing boundary points
                         */
-                         if (camera.x > radius) && (zSign == true) {
+                         if (cameraPos.x > radius) && (zSign == true) {
                             zSign = false
-                            camera.x = radius
-                        } else if (camera.x > radius) && (zSign == false) {
+                            cameraPos.x = radius
+                        } else if (cameraPos.x > radius) && (zSign == false) {
                             zSign = true
-                            camera.x = radius
-                        } else if (camera.x < -radius) && (zSign == true) {
+                            cameraPos.x = radius
+                        } else if (cameraPos.x < -radius) && (zSign == true) {
                             zSign = false
-                            camera.x = -radius
-                        } else if (camera.x < -radius) && (zSign == false) {
+                            cameraPos.x = -radius
+                        } else if (cameraPos.x < -radius) && (zSign == false) {
                             zSign = true
-                            camera.x = -radius
+                            cameraPos.x = -radius
                         }
-                        
-                        if camera.y > radius {
-                            camera.y = radius
-                        } else if camera.y < 0.05 {
-                            camera.y = 0.05
+
+                        if cameraPos.y > radius {
+                            cameraPos.y = radius
+                        } else if cameraPos.y < 0.05 {
+                            cameraPos.y = 0.05
                         }
-                        
-                        // If zSign is -ve, camera is "behind" the point of reference and camera.z should be negative
-                        camera.z = zSign ? sqrt(pow(radius,2) - pow(camera.x, 2)) : -sqrt(pow(radius,2) - pow(camera.x, 2))
+
+                        // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.z should be negative
+                        cameraPos.z = zSign ? sqrt(pow(radius,2) - pow(cameraPos.x, 2)) : -sqrt(pow(radius,2) - pow(cameraPos.x, 2))
                     }
             )
     }
