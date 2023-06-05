@@ -7,18 +7,15 @@
 
 import SwiftUI
 import RealityKit
-import Combine
 import SceneKit
 
 class CameraPosition {
     // Stores the x, y and z angles for the cameraPos
-    var x: Float = 0
-    var y: Float = 0
-    var z: Float = 5.0
+    var coords = SCNVector3(x: 0, y: 1.5, z: 5)
 }
 
 class CarPositions {
-    var positions: [(x: Float, y: Float, z: Float, duration: Double)] = []
+    var positions: [(coords: SCNVector3, duration: Double)] = []
     var count: Int = 0
 }
 
@@ -66,41 +63,41 @@ struct LapComparisonView: View {
                 let z = (Float(coords[2]) ?? 0) / 100
                 
                 if i == 0 {
-                    dataStore.positions.append((x: x, y: y, z: z, duration: Double(0)))
+                    dataStore.positions.append((coords: SCNVector3(x: x, y: y, z: z), duration: Double(0)))
                 } else {
-                    dataStore.positions.append((x: x, y: y, z: z, duration: (posData[i].timestamp - posData[i-1].timestamp)))
+                    dataStore.positions.append((coords: SCNVector3(x: x, y: y, z: z), duration: (posData[i].timestamp - posData[i-1].timestamp)))
                 }
             }
         }
     }
     
-    private func interpolate(reference: CarPositions, target: CarPositions) -> CarPositions {
-        let res = CarPositions()
-        var count = 0
-        var referenceTimestamp: Double = 0
-        var targetTimestamp: Double = 0
-        for position in reference.positions {
-            if count == target.positions.count {
-                break
-            }
-            
-            referenceTimestamp += position.duration
-            for i in count...(target.positions.count - 1) {
-                targetTimestamp += target.positions[i].duration
-                if targetTimestamp > referenceTimestamp {
-                    let interpolatedX = target.positions[i].x - ((target.positions[i].x - target.positions[i-1].x)/2)
-                    let interpolatedY = target.positions[i].y - ((target.positions[i].y - target.positions[i-1].y)/2)
-                    let interpolatedZ = target.positions[i].z - ((target.positions[i].z - target.positions[i-1].z)/2)
-                    res.positions.append((x: interpolatedX, y: interpolatedY, z: interpolatedZ, duration: position.duration))
-                } else {
-                    res.positions.append(target.positions[i])
-                }
-                count += 1
-            }
-        }
-        
-        return res
-    }
+//    private func interpolate(reference: CarPositions, target: CarPositions) -> CarPositions {
+//        let res = CarPositions()
+//        var count = 0
+//        var referenceTimestamp: Double = 0
+//        var targetTimestamp: Double = 0
+//        for position in reference.positions {
+//            if count == target.positions.count {
+//                break
+//            }
+//
+//            referenceTimestamp += position.duration
+//            for i in count...(target.positions.count - 1) {
+//                targetTimestamp += target.positions[i].duration
+//                if targetTimestamp > referenceTimestamp {
+//                    let interpolatedX = target.positions[i].x - ((target.positions[i].x - target.positions[i-1].x)/2)
+//                    let interpolatedY = target.positions[i].y - ((target.positions[i].y - target.positions[i-1].y)/2)
+//                    let interpolatedZ = target.positions[i].z - ((target.positions[i].z - target.positions[i-1].z)/2)
+//                    res.positions.append((x: interpolatedX, y: interpolatedY, z: interpolatedZ, duration: position.duration))
+//                } else {
+//                    res.positions.append(target.positions[i])
+//                }
+//                count += 1
+//            }
+//        }
+//
+//        return res
+//    }
     
     var sceneView: some View {
         let scene = ComparisonScene(car1Pos: car1Pos, car2Pos: car2Pos, cameraPos: cameraPos)
@@ -110,49 +107,49 @@ struct LapComparisonView: View {
                     .onChanged { translate in
 
                         if translate.translation.width > prevX { // Moving to the east
-                            cameraPos.x += zSign ? xModifier : -xModifier // controls direction of magnitude change of cameraPos.x
+                            cameraPos.coords.x += zSign ? xModifier : -xModifier // controls direction of magnitude change of cameraPos.coords.x
                         } else {
-                            cameraPos.x += zSign ? -xModifier : xModifier
+                            cameraPos.coords.x += zSign ? -xModifier : xModifier
                         }
 
-                        if translate.translation.height > prevY { // Moving to the north
-                            cameraPos.y += yModifier * Float(abs(translate.translation.height - prevY))
-                        } else {
-                            cameraPos.y -= yModifier * Float(abs(translate.translation.height - prevY))
-                        }
+//                        if translate.translation.height > prevY { // Moving to the north
+//                            cameraPos.coords.y += yModifier * Float(abs(translate.translation.height - prevY))
+//                        } else {
+//                            cameraPos.coords.y -= yModifier * Float(abs(translate.translation.height - prevY))
+//                        }
 
                         prevX = translate.translation.width
 
                         /*
-                            This block ensures that cameraPos.x is always within [-radius, radius]
-                            If cameraPos.x > radius, cameraPos.x will decrease until -radius
-                            If cameraPos.x < -radius, cameraPos.x will increase until radius
+                            This block ensures that cameraPos.coords.x is always within [-radius, radius]
+                            If cameraPos.coords.x > radius, cameraPos.coords.x will decrease until -radius
+                            If cameraPos.coords.x < -radius, cameraPos.coords.x will increase until radius
                             Direction of change is determined by zSign
 
-                            This allows for "rolling" over of cameraPos.x when crossing boundary points
+                            This allows for "rolling" over of cameraPos.coords.x when crossing boundary points
                         */
-                         if (cameraPos.x > radius) && (zSign == true) {
+                         if (cameraPos.coords.x > radius) && (zSign == true) {
                             zSign = false
-                            cameraPos.x = radius
-                        } else if (cameraPos.x > radius) && (zSign == false) {
+                            cameraPos.coords.x = radius
+                        } else if (cameraPos.coords.x > radius) && (zSign == false) {
                             zSign = true
-                            cameraPos.x = radius
-                        } else if (cameraPos.x < -radius) && (zSign == true) {
+                            cameraPos.coords.x = radius
+                        } else if (cameraPos.coords.x < -radius) && (zSign == true) {
                             zSign = false
-                            cameraPos.x = -radius
-                        } else if (cameraPos.x < -radius) && (zSign == false) {
+                            cameraPos.coords.x = -radius
+                        } else if (cameraPos.coords.x < -radius) && (zSign == false) {
                             zSign = true
-                            cameraPos.x = -radius
+                            cameraPos.coords.x = -radius
                         }
 
-                        if cameraPos.y > radius {
-                            cameraPos.y = radius
-                        } else if cameraPos.y < 0.05 {
-                            cameraPos.y = 0.05
-                        }
+//                        if cameraPos.coords.y > radius {
+//                            cameraPos.coords.y = radius
+//                        } else if cameraPos.coords.y < 0.05 {
+//                            cameraPos.coords.y = 0.05
+//                        }
 
-                        // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.z should be negative
-                        cameraPos.z = zSign ? sqrt(pow(radius,2) - pow(cameraPos.x, 2)) : -sqrt(pow(radius,2) - pow(cameraPos.x, 2))
+                        // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.coords.z should be negative
+                        cameraPos.coords.z = zSign ? sqrt(pow(radius,2) - pow(cameraPos.coords.x, 2)) : -sqrt(pow(radius,2) - pow(cameraPos.coords.x, 2))
                     }
             )
     }
