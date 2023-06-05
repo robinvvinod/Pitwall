@@ -28,6 +28,7 @@
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
 		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
 		0094DDB62A296F1200E37522 /* ComparisonScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0094DDB52A296F1200E37522 /* ComparisonScene.swift */; };
+		00A2B8C32A2DCB6D00B3987C /* SceneKitAssets.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 		00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DDE4F82A2223520022585E /* LapHistoryView.swift */; };
 /* End PBXBuildFile section */
@@ -74,6 +75,7 @@
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
 		0094DDB52A296F1200E37522 /* ComparisonScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonScene.swift; sourceTree = "<group>"; };
+		00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */ = {isa = PBXFileReference; lastKnownFileType = wrapper.scnassets; path = SceneKitAssets.scnassets; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 		00DDE4F82A2223520022585E /* LapHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapHistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -137,6 +139,7 @@
 				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
 				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
 				0094DDB52A296F1200E37522 /* ComparisonScene.swift */,
+				00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */,
 				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
@@ -279,6 +282,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				00A2B8C32A2DCB6D00B3987C /* SceneKitAssets.scnassets in Resources */,
 				000CFFB12A0104A700AAF530 /* Preview Assets.xcassets in Resources */,
 				000CFFAE2A0104A700AAF530 /* Assets.xcassets in Resources */,
 			);

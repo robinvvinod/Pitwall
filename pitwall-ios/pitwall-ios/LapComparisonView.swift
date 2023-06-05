@@ -11,7 +11,8 @@ import SceneKit
 
 class CameraPosition {
     // Stores the x, y and z angles for the cameraPos
-    var coords = SCNVector3(x: 0, y: 1.5, z: 5)
+    var coords = SCNVector3(x: 0, y: 3, z: 15)
+    let radius: Float = 15
 }
 
 class CarPositions {
@@ -33,7 +34,6 @@ struct LapComparisonView: View {
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
     @State private var prevY: Double = 0
     @State private var zSign: Bool = true // true is +ve z, false is -ve z
-    private let radius: Float = 5 // Radius of rotation of cameraPos around y-axis
     private let xModifier: Float = 0.05 // Scales gesture distance to change in coords of cameraPos
     private let yModifier: Float = 0.0001
     
@@ -45,7 +45,9 @@ struct LapComparisonView: View {
                 .onAppear {
                     getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
                     getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
-                    dataLoaded = true
+                    if (car1Pos.positions.count != 0) && (car2Pos.positions.count != 0) {
+                        dataLoaded = true
+                    }
             }
         }
     }
@@ -58,9 +60,9 @@ struct LapComparisonView: View {
         for i in 0...(posData.count - 1) {
             let coords = posData[i].value.components(separatedBy: ",")
             if coords[0] == "OnTrack" {
-                let x = (Float(coords[1]) ?? 0) / 100
-                let y = (Float(coords[3]) ?? 0) / 100 // y and z coords are swapped between F1 live data and RealityKit
-                let z = (Float(coords[2]) ?? 0) / 100
+                let x = (Float(coords[1]) ?? 0) / 10
+                let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and RealityKit
+                let z = (Float(coords[2]) ?? 0) / 10
                 
                 if i == 0 {
                     dataStore.positions.append((coords: SCNVector3(x: x, y: y, z: z), duration: Double(0)))
@@ -121,35 +123,35 @@ struct LapComparisonView: View {
                         prevX = translate.translation.width
 
                         /*
-                            This block ensures that cameraPos.coords.x is always within [-radius, radius]
-                            If cameraPos.coords.x > radius, cameraPos.coords.x will decrease until -radius
-                            If cameraPos.coords.x < -radius, cameraPos.coords.x will increase until radius
+                            This block ensures that cameraPos.coords.x is always within [-cameraPos.radius, cameraPos.radius]
+                            If cameraPos.coords.x > cameraPos.radius, cameraPos.coords.x will decrease until -cameraPos.radius
+                            If cameraPos.coords.x < -cameraPos.radius, cameraPos.coords.x will increase until cameraPos.radius
                             Direction of change is determined by zSign
 
                             This allows for "rolling" over of cameraPos.coords.x when crossing boundary points
                         */
-                         if (cameraPos.coords.x > radius) && (zSign == true) {
+                         if (cameraPos.coords.x > cameraPos.radius) && (zSign == true) {
                             zSign = false
-                            cameraPos.coords.x = radius
-                        } else if (cameraPos.coords.x > radius) && (zSign == false) {
+                            cameraPos.coords.x = cameraPos.radius
+                        } else if (cameraPos.coords.x > cameraPos.radius) && (zSign == false) {
                             zSign = true
-                            cameraPos.coords.x = radius
-                        } else if (cameraPos.coords.x < -radius) && (zSign == true) {
+                            cameraPos.coords.x = cameraPos.radius
+                        } else if (cameraPos.coords.x < -cameraPos.radius) && (zSign == true) {
                             zSign = false
-                            cameraPos.coords.x = -radius
-                        } else if (cameraPos.coords.x < -radius) && (zSign == false) {
+                            cameraPos.coords.x = -cameraPos.radius
+                        } else if (cameraPos.coords.x < -cameraPos.radius) && (zSign == false) {
                             zSign = true
-                            cameraPos.coords.x = -radius
+                            cameraPos.coords.x = -cameraPos.radius
                         }
 
-//                        if cameraPos.coords.y > radius {
-//                            cameraPos.coords.y = radius
+//                        if cameraPos.coords.y > cameraPos.radius {
+//                            cameraPos.coords.y = cameraPos.radius
 //                        } else if cameraPos.coords.y < 0.05 {
 //                            cameraPos.coords.y = 0.05
 //                        }
 
                         // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.coords.z should be negative
-                        cameraPos.coords.z = zSign ? sqrt(pow(radius,2) - pow(cameraPos.coords.x, 2)) : -sqrt(pow(radius,2) - pow(cameraPos.coords.x, 2))
+                        cameraPos.coords.z = zSign ? sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2)) : -sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2))
                     }
             )
     }
