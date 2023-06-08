@@ -50,14 +50,14 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         for i in 0..<car1Pos.positions.count - 1 {
             self.drawTrack(positionA: car1Pos.positions[i].coords, positionB: car1Pos.positions[i+1].coords, width: 12, offset: -0.5)
         }
-        
+                
         car1.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
-        car1.position = SCNVector3Make(0.0, 0.0, 0.0)
+        car1.position = self.car1Pos.positions[0].coords
         car1.opacity = 0.9
         self.rootNode.addChildNode(car1)
         
         car2.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
-        car2.position = SCNVector3Make(0.0, 0.0, 0.0)
+        car2.position = self.car2Pos.positions[0].coords
         car2.opacity = 0.9
         self.rootNode.addChildNode(car2)
         
@@ -69,31 +69,38 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         cameraNode.constraints = [lookAt]
         car1.addChildNode(cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
         
-        self.nextMove(node: car1, carPos: car1Pos, color: UIColor.blue)
-        self.nextMove(node: car2, carPos: car2Pos, color: UIColor.orange)
-    }
+        let car1Seq = self.generateActionSequence(carPos: self.car1Pos)
+        let car2Seq = self.generateActionSequence(carPos: self.car2Pos)
         
-    private func nextMove(node: SCNNode, carPos: CarPositions, color: UIColor) {
-        if carPos.count < carPos.positions.count - 1 {
-            SCNTransaction.begin()
-            SCNTransaction.animationDuration = carPos.positions[carPos.count].duration
-            node.look(at: carPos.positions[carPos.count].coords, up: self.rootNode.worldUp, localFront: SCNVector3(0,0,1))
-            SCNTransaction.commit()
-            
-            node.runAction(SCNAction.move(to: carPos.positions[carPos.count].coords, duration: carPos.positions[carPos.count].duration)) {
-                // Trace path of movement
-                if carPos.count > 0 {
-                    let positionA = carPos.positions[carPos.count - 1].coords
-                    let positionB = carPos.positions[carPos.count].coords
-                    self.tracePath(positionA: positionA, positionB: positionB, color: color, radius: 0.1, offset: 0.5)
-                }
-                
-                carPos.count += 1
-                self.nextMove(node: node, carPos: carPos, color: color)
-            }
-        }
+        car1.runAction(car1Seq)
+        car2.runAction(car2Seq)
     }
     
+    private func generateActionSequence(carPos: CarPositions) -> SCNAction {
+        var seq: [SCNAction] = []
+        while carPos.count < carPos.positions.count - 1 {
+
+            let x = carPos.positions[carPos.count].coords.x
+            let y = carPos.positions[carPos.count].coords.y
+            let z = carPos.positions[carPos.count].coords.z
+
+            let lookWithDurationAction = SCNAction.run { node in
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = carPos.positions[carPos.count].duration
+                node.look(at: SCNVector3(x: x, y: y, z: z), up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+                SCNTransaction.commit()
+            }
+            
+            let group = SCNAction.group([
+                SCNAction.move(to: carPos.positions[carPos.count].coords, duration: carPos.positions[carPos.count].duration),
+                lookWithDurationAction
+            ])
+            seq.append(group)
+            carPos.count += 1
+        }
+        return SCNAction.sequence(seq)
+    }
+        
     private func tracePath(positionA: SCNVector3, positionB: SCNVector3, color: UIColor, radius: CGFloat, offset: Float) {
         let vector = SCNVector3(positionA.x - positionB.x, (positionA.y + offset) - (positionB.y + offset), positionA.z - positionB.z)
         let distance = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)

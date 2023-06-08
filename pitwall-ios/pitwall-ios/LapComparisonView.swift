@@ -78,51 +78,51 @@ struct LapComparisonView: View {
                     
                     self.resample(reference: car1Pos, target: car2Pos)
                     self.resample(reference: car2Pos, target: car1Pos)
-                    
+
                     self.calculateDurations(carPos: car1Pos)
                     self.calculateDurations(carPos: car2Pos)
-                    
+
                     var xSmooth: [Float] = []
                     var ySmooth: [Float] = []
                     var zSmooth: [Float] = []
                     var tSmooth: [Float] = []
-                    
+
                     for i in 0...(car2Pos.positions.count - 1) {
                         xSmooth.append(car2Pos.positions[i].coords.x)
                         ySmooth.append(car2Pos.positions[i].coords.y)
                         zSmooth.append(car2Pos.positions[i].coords.z)
                         tSmooth.append(Float(car2Pos.positions[i].timestamp))
                     }
-                    
+
                     xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    
+
                     for i in 0...(xSmooth.count - 1) {
                         car2Pos.positions[i].coords.x = xSmooth[i]
                         car2Pos.positions[i].coords.y = ySmooth[i]
                         car2Pos.positions[i].coords.z = zSmooth[i]
                         car2Pos.positions[i].timestamp = Double(tSmooth[i])
                     }
-                    
+
                     xSmooth = []
                     ySmooth = []
                     zSmooth = []
                     tSmooth = []
-                    
+
                     for i in 0...(car1Pos.positions.count - 1) {
                         xSmooth.append(car1Pos.positions[i].coords.x)
                         ySmooth.append(car1Pos.positions[i].coords.y)
                         zSmooth.append(car1Pos.positions[i].coords.z)
                         tSmooth.append(Float(car1Pos.positions[i].timestamp))
                     }
-                    
+
                     xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
                     tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    
+
                     for i in 0...(xSmooth.count - 1) {
                         car1Pos.positions[i].coords.x = xSmooth[i]
                         car1Pos.positions[i].coords.y = ySmooth[i]
@@ -186,7 +186,7 @@ struct LapComparisonView: View {
                 var j = i
                 while j < carPos.positions.count {
                     if carPos.positions[j].interpolated == false {
-                        carPos.positions[i].coords = self.interpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: carPos.positions[i].timestamp)
+                        carPos.positions[i].coords = self.linearInterpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
                         break
                     } else {
                         j += 1
@@ -196,7 +196,7 @@ struct LapComparisonView: View {
         }
     }
     
-    private func interpolate(prev: SinglePosition, next: SinglePosition, t: Double) -> SCNVector3 {
+    private func linearInterpolate(prev: SinglePosition, next: SinglePosition, t: Float) -> SCNVector3 {
         let numerator = Float(prev.timestamp - next.timestamp)
         var x: Float = 0
         var y: Float = 0
@@ -210,7 +210,7 @@ struct LapComparisonView: View {
         } else {
             m = numerator / (prev.coords.x - next.coords.x)
             c = Float(prev.timestamp) - (m * prev.coords.x)
-            x = (Float(t) - c) / m
+            x = (t - c) / m
         }
         
         // Solving y
@@ -219,7 +219,7 @@ struct LapComparisonView: View {
         } else {
             m = numerator / (prev.coords.y - next.coords.y)
             c = Float(prev.timestamp) - (m * prev.coords.y)
-            y = (Float(t) - c) / m
+            y = (t - c) / m
         }
         
         // Solving z
@@ -228,7 +228,7 @@ struct LapComparisonView: View {
         } else {
             m = numerator / (prev.coords.z - next.coords.z)
             c = Float(prev.timestamp) - (m * prev.coords.z)
-            z = (Float(t) - c) / m
+            z = (t - c) / m
         }
         
         return SCNVector3(x: Float(x), y: Float(y), z: Float(z))
