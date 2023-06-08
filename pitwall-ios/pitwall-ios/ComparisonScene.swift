@@ -14,6 +14,8 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
     private var car2Pos: CarPositions
     private var cameraPos: CameraPosition
     private var cameraNode: SCNNode
+    private var car1: SCNNode
+    private var car2: SCNNode
     
     init(car1Pos: CarPositions, car2Pos: CarPositions, cameraPos: CameraPosition) {
         self.car1Pos = car1Pos
@@ -21,6 +23,18 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         self.cameraPos = cameraPos
         let cameraNode = SCNNode()
         self.cameraNode = cameraNode
+        
+        guard let url = Bundle.main.url(forResource: "f1_model", withExtension: "obj", subdirectory: "SceneKitAssets.scnassets") else { fatalError("Failed to find model file.")
+        }
+
+        let asset = MDLAsset(url:url)
+        guard let carObject = asset.object(at: 0) as? MDLMesh else {
+            fatalError("Failed to get mesh from asset.")
+        }
+        
+        self.car1 = SCNNode(mdlObject: carObject)
+        self.car2 = SCNNode(mdlObject: carObject)
+        
         super.init()
         
         self.background.contents = MDLSkyCubeTexture(name: "sky",
@@ -36,22 +50,12 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         for i in 0..<car1Pos.positions.count - 1 {
             self.drawTrack(positionA: car1Pos.positions[i].coords, positionB: car1Pos.positions[i+1].coords, width: 12, offset: -0.5)
         }
-                    
-        guard let url = Bundle.main.url(forResource: "f1_model", withExtension: "obj", subdirectory: "SceneKitAssets.scnassets") else { fatalError("Failed to find model file.")
-        }
-
-        let asset = MDLAsset(url:url)
-        guard let carObject = asset.object(at: 0) as? MDLMesh else {
-            fatalError("Failed to get mesh from asset.")
-        }
         
-        let car1 = SCNNode(mdlObject: carObject)
         car1.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
         car1.position = SCNVector3Make(0.0, 0.0, 0.0)
         car1.opacity = 0.9
         self.rootNode.addChildNode(car1)
         
-        let car2 = SCNNode(mdlObject: carObject)
         car2.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
         car2.position = SCNVector3Make(0.0, 0.0, 0.0)
         car2.opacity = 0.9
@@ -71,14 +75,17 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         
     private func nextMove(node: SCNNode, carPos: CarPositions, color: UIColor) {
         if carPos.count < carPos.positions.count - 1 {
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = carPos.positions[carPos.count].duration
             node.look(at: carPos.positions[carPos.count].coords, up: self.rootNode.worldUp, localFront: SCNVector3(0,0,1))
+            SCNTransaction.commit()
             
             node.runAction(SCNAction.move(to: carPos.positions[carPos.count].coords, duration: carPos.positions[carPos.count].duration)) {
                 // Trace path of movement
                 if carPos.count > 0 {
                     let positionA = carPos.positions[carPos.count - 1].coords
                     let positionB = carPos.positions[carPos.count].coords
-                    self.tracePath(positionA: positionA, positionB: positionB, color: color, radius: 0.01, offset: 0.5)
+                    self.tracePath(positionA: positionA, positionB: positionB, color: color, radius: 0.1, offset: 0.5)
                 }
                 
                 carPos.count += 1
@@ -107,7 +114,7 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         let midPosition = SCNVector3 (x: (positionA.x + positionB.x) / 2, y: (positionA.y + positionB.y) / 2, z: (positionA.z + positionB.z) / 2)
 
         let lineGeometry = SCNBox(width: width, height: 0.01, length: CGFloat(distance), chamferRadius: 0)
-        lineGeometry.firstMaterial!.diffuse.contents = UIColor.green
+        lineGeometry.firstMaterial!.diffuse.contents = UIColor.darkGray
 
         let lineNode = SCNNode(geometry: lineGeometry)
         lineNode.position = midPosition
