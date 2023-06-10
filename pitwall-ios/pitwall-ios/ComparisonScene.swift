@@ -78,25 +78,32 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
     
     private func generateActionSequence(carPos: CarPositions) -> SCNAction {
         var seq: [SCNAction] = []
-        while carPos.count < carPos.positions.count - 1 {
+        for i in 0...(carPos.positions.count - 1) {
+            /*
+             These placeholder vars are needed to avoid the lookWithDurationAction block from using reference-type values of x,y,z from
+             the carPos instance at the time the action is called, instead of the values when the block is instantiated.
+            */
+            let x = carPos.positions[i].coords.x
+            let y = carPos.positions[i].coords.y
+            let z = carPos.positions[i].coords.z
+            let dur = carPos.positions[i].duration
 
-            let x = carPos.positions[carPos.count].coords.x
-            let y = carPos.positions[carPos.count].coords.y
-            let z = carPos.positions[carPos.count].coords.z
-
+            /*
+             Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
+             to look at the destination coordinate. These 2 actions are exectured in parallel.
+            */
             let lookWithDurationAction = SCNAction.run { node in
                 SCNTransaction.begin()
-                SCNTransaction.animationDuration = carPos.positions[carPos.count].duration
+                SCNTransaction.animationDuration = dur
                 node.look(at: SCNVector3(x: x, y: y, z: z), up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
                 SCNTransaction.commit()
             }
             
             let group = SCNAction.group([
-                SCNAction.move(to: carPos.positions[carPos.count].coords, duration: carPos.positions[carPos.count].duration),
+                SCNAction.move(to: SCNVector3(x: x, y: y, z: z), duration: dur),
                 lookWithDurationAction
             ])
             seq.append(group)
-            carPos.count += 1
         }
         return SCNAction.sequence(seq)
     }

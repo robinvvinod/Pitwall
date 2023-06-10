@@ -8,7 +8,6 @@
 import SwiftUI
 import RealityKit
 import SceneKit
-import Charts
 import Accelerate
 
 class CameraPosition {
@@ -17,20 +16,26 @@ class CameraPosition {
     let radius: Float = 15
 }
 
-struct SinglePosition {
-    var coords: SCNVector3
-    var duration: Double = 0
-    var timestamp: Double
-    var interpolated: Bool = false
+struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
+    var coords: SCNVector3 // Current coordinate of car
+    var timestamp: Double // No. of seconds since the start of the lap
     
+    /*
+     No. of seconds the car took to get to this coordinate from the previous coordinate.
+     Defaults to 0 since the number of total positions changes during resampling.
+     Hence, delta between this and last coord can only be calculated once resampling is finished.
+    */
+    var duration: Double = 0
+    var interpolated: Bool = false // True if the coord was calculated via interpolation
+    
+    // Any position will be sorted in chronological order
     static func <(lhs: SinglePosition, rhs: SinglePosition) -> Bool {
         return lhs.timestamp < rhs.timestamp
     }
 }
 
-class CarPositions {
+class CarPositions { // Contains all the positions of a given car for a given lap
     var positions: [SinglePosition] = []
-    var count: Int = 0
 }
 
 struct LapComparisonView: View {
@@ -53,23 +58,6 @@ struct LapComparisonView: View {
     var body: some View {
         if dataLoaded {
             sceneView
-//            Chart {
-//                ForEach(0...(car2Pos.positions.count - 1), id: \.self) { i in
-//                    LineMark(x: .value("t", car2Pos.positions[i].timestamp), y: .value("x", car2Pos.positions[i].coords.x))
-//                        .foregroundStyle(.blue)
-//                    LineMark(x: .value("t", car2Pos.positions[i].timestamp), y: .value("z", car2Pos.positions[i].coords.z))
-//                        .foregroundStyle(.orange)
-//                }
-                
-//                ForEach(0...(car1Pos.positions.count - 1), id: \.self) { i in
-//                    LineMark(x: .value("t", car1Pos.positions[i].timestamp), y: .value("x", car1Pos.positions[i].coords.x))
-//                        .foregroundStyle(.green)
-//                    LineMark(x: .value("t", car1Pos.positions[i].timestamp), y: .value("z", car1Pos.positions[i].coords.z))
-//                        .foregroundStyle(.yellow)
-//
-//                }
-                
-//            }
         } else {
             VStack {}
                 .onAppear {
@@ -79,100 +67,73 @@ struct LapComparisonView: View {
                     self.resample(reference: car1Pos, target: car2Pos)
                     self.resample(reference: car2Pos, target: car1Pos)
 
+                    self.smoothConvolve(carPos: car1Pos)
+                    self.smoothConvolve(carPos: car2Pos)
+                    
                     self.calculateDurations(carPos: car1Pos)
                     self.calculateDurations(carPos: car2Pos)
-
-                    var xSmooth: [Float] = []
-                    var ySmooth: [Float] = []
-                    var zSmooth: [Float] = []
-                    var tSmooth: [Float] = []
-
-                    for i in 0...(car2Pos.positions.count - 1) {
-                        xSmooth.append(car2Pos.positions[i].coords.x)
-                        ySmooth.append(car2Pos.positions[i].coords.y)
-                        zSmooth.append(car2Pos.positions[i].coords.z)
-                        tSmooth.append(Float(car2Pos.positions[i].timestamp))
-                    }
-
-                    xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-
-                    for i in 0...(xSmooth.count - 1) {
-                        car2Pos.positions[i].coords.x = xSmooth[i]
-                        car2Pos.positions[i].coords.y = ySmooth[i]
-                        car2Pos.positions[i].coords.z = zSmooth[i]
-                        car2Pos.positions[i].timestamp = Double(tSmooth[i])
-                    }
-
-                    xSmooth = []
-                    ySmooth = []
-                    zSmooth = []
-                    tSmooth = []
-
-                    for i in 0...(car1Pos.positions.count - 1) {
-                        xSmooth.append(car1Pos.positions[i].coords.x)
-                        ySmooth.append(car1Pos.positions[i].coords.y)
-                        zSmooth.append(car1Pos.positions[i].coords.z)
-                        tSmooth.append(Float(car1Pos.positions[i].timestamp))
-                    }
-
-                    xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-                    tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-
-                    for i in 0...(xSmooth.count - 1) {
-                        car1Pos.positions[i].coords.x = xSmooth[i]
-                        car1Pos.positions[i].coords.y = ySmooth[i]
-                        car1Pos.positions[i].coords.z = zSmooth[i]
-                        car1Pos.positions[i].timestamp = Double(tSmooth[i])
-                    }
                     
+                    // TODO: Change this to an error being thrown that notifies user
                     if (!car1Pos.positions.isEmpty) && (!car2Pos.positions.isEmpty) {
                         dataLoaded = true
                     }
             }
         }
     }
-    
+        
     private func getRawPositions(driver: String, lap: Int, dataStore: CarPositions) {
+        
+        // Load position data stored in the driverDatabase. If driver/lap provided does not exist, default value is an empty array
         let posData = processor.driverDatabase[driver]?.laps[String(lap)]?.PositionData ?? []
+        // If no position data is available for the lap, or the lap does not exist, throw an error
         if posData.count == 0 {
-            return
+            return // TODO: Throw an error instead of simply returning?
         }
-        for i in 0..<posData.count {
+        
+        // Loop through the raw position data array and store data inside CarPositions class
+        for i in 0...(posData.count - 1) {
             let coords = posData[i].value.components(separatedBy: ",")
-            if coords[0] == "OnTrack" {
+            if coords[0] == "OnTrack" { // Kafka also broadcasts OffTrack coords which we can ignore
+                // All coords are divided by 10 since F1 provides data that is accurate to 1/10th of a meter.
                 let x = (Float(coords[1]) ?? 0) / 10
-                let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and RealityKit
+                let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
                 let z = (Float(coords[2]) ?? 0) / 10
                 
-                if i == 0 {
-                    dataStore.positions.append(SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: 0.0))
-                } else {
-                    dataStore.positions.append(SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp))
-                }
+                dataStore.positions.append(
+                    SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp)
+                ) // Timestamp will be 0 for the first position
             }
         }
     }
     
     private func calculateDurations(carPos: CarPositions) {
-        for i in 0..<carPos.positions.count {
-            if i != 0 {
-                carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
-            }
+        // Once all resampling is done, calculate final durations
+        for i in 1...(carPos.positions.count - 1) {
+            carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
         }
     }
     
     private func resample(reference: CarPositions, target: CarPositions) {
+        /*
+         Resampling ensures that both cars will have the same number of position data points. There is no loss of accuracy
+         when resampling as linear interpolation is done between non-interpolated data to calculate missing data points. This would have
+         otherwise been done anyway since the SCNAction.move(duration:) is a linear animation.
+         
+         The resampled data ensures that both cars will have SCNAction.move() being called in parallel and for the same number of
+         times, preventing processing delays from adding up and diverging the gap between the cars.
+         
+         All timestamps in reference will be added to target, if not already present.
+        */
+        
         for refItem in reference.positions {
-            let index = target.positions.insertionIndexOf(elem: refItem) {$0 < $1}
+            let index = target.positions.insertionIndexOf(elem: refItem) {$0 < $1} // target.positions is sorted in chronological order
             if index > (target.positions.count - 1) {
+                /*
+                 The first and last coords are considered to be absolute values. Hence, if reference has more data points than target, the
+                 last coord of target is duplicated.
+                */
                 target.positions.append(SinglePosition(coords: target.positions.last?.coords ?? SCNVector3(), timestamp: refItem.timestamp))
-                target.positions[index].interpolated = true
-            } else if target.positions[index].timestamp != refItem.timestamp {
+            } else if target.positions[index].timestamp != refItem.timestamp { // Only interpolate if data does not already exist
                 target.positions.insert(SinglePosition(coords: SCNVector3(), timestamp: refItem.timestamp), at: index)
                 target.positions[index].interpolated = true
             }
@@ -181,10 +142,14 @@ struct LapComparisonView: View {
     }
     
     private func fillMissing(carPos: CarPositions) {
-        for i in 0..<carPos.positions.count {
+        /*
+         Any data point that is marked with interpolated == true will have it's coordinate calculated via linear interpolation between
+         the previous coordinate and the next non-interpolated coordinate.
+        */
+        for i in 0...(carPos.positions.count - 1) {
             if carPos.positions[i].interpolated == true {
                 var j = i
-                while j < carPos.positions.count {
+                while j < carPos.positions.count { // Finding next non-interpolated data point
                     if carPos.positions[j].interpolated == false {
                         carPos.positions[i].coords = self.linearInterpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
                         break
@@ -197,6 +162,10 @@ struct LapComparisonView: View {
     }
     
     private func linearInterpolate(prev: SinglePosition, next: SinglePosition, t: Float) -> SCNVector3 {
+        /*
+         t: Float is the timestamp for which the unknown coord should be calculated. The linear equation of a line formed by
+         (time1, x1/y1/z1) and (time2, x2/y2/z2) is calculated using subtraction method of solving simult. eqns.
+        */
         let numerator = Float(prev.timestamp - next.timestamp)
         var x: Float = 0
         var y: Float = 0
@@ -232,6 +201,32 @@ struct LapComparisonView: View {
         }
         
         return SCNVector3(x: Float(x), y: Float(y), z: Float(z))
+    }
+    
+    private func smoothConvolve(carPos: CarPositions) {
+        var xSmooth: [Float] = []
+        var ySmooth: [Float] = []
+        var zSmooth: [Float] = []
+        var tSmooth: [Float] = []
+
+        for i in 0...(carPos.positions.count - 1) {
+            xSmooth.append(carPos.positions[i].coords.x)
+            ySmooth.append(carPos.positions[i].coords.y)
+            zSmooth.append(carPos.positions[i].coords.z)
+            tSmooth.append(Float(carPos.positions[i].timestamp))
+        }
+
+        xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
+        ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
+        zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
+        tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
+
+        for i in 0...(xSmooth.count - 1) {
+            carPos.positions[i].coords.x = xSmooth[i]
+            carPos.positions[i].coords.y = ySmooth[i]
+            carPos.positions[i].coords.z = zSmooth[i]
+            carPos.positions[i].timestamp = Double(tSmooth[i])
+        }
     }
     
     var sceneView: some View {
