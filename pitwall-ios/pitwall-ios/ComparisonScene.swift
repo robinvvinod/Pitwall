@@ -21,6 +21,8 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         self.car1Pos = car1Pos
         self.car2Pos = car2Pos
         self.cameraPos = cameraPos
+        
+        // Setting up camera and car nodes. Needs to be done before calling super.init()
         let cameraNode = SCNNode()
         self.cameraNode = cameraNode
         
@@ -51,29 +53,29 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
             self.drawTrack(positionA: car1Pos.positions[i].coords, positionB: car1Pos.positions[i+1].coords, width: 12, offset: -0.5)
         }
                 
-        car1.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
-        car1.position = self.car1Pos.positions[0].coords
-        car1.opacity = 0.9
-        self.rootNode.addChildNode(car1)
+        self.car1.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
+        self.car1.position = self.car1Pos.positions[0].coords
+        self.car1.opacity = 0.9
+        self.rootNode.addChildNode(self.car1)
         
-        car2.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
-        car2.position = self.car2Pos.positions[0].coords
-        car2.opacity = 0.9
-        self.rootNode.addChildNode(car2)
+        self.car2.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
+        self.car2.position = self.car2Pos.positions[0].coords
+        self.car2.opacity = 0.9
+        self.rootNode.addChildNode(self.car2)
         
-        cameraNode.camera = SCNCamera()
-        cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
-        cameraNode.camera?.zFar = 500
+        self.cameraNode.camera = SCNCamera()
+        self.cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
+        self.cameraNode.camera?.zFar = 500
         let lookAt = SCNLookAtConstraint(target: car1)
         lookAt.isGimbalLockEnabled = true
-        cameraNode.constraints = [lookAt]
-        car1.addChildNode(cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
+        self.cameraNode.constraints = [lookAt]
+        self.car1.addChildNode(self.cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
         
         let car1Seq = self.generateActionSequence(carPos: self.car1Pos)
         let car2Seq = self.generateActionSequence(carPos: self.car2Pos)
         
-        car1.runAction(car1Seq)
-        car2.runAction(car2Seq)
+        self.car1.runAction(car1Seq)
+        self.car2.runAction(car2Seq)
     }
     
     private func generateActionSequence(carPos: CarPositions) -> SCNAction {
@@ -118,7 +120,7 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
 
         let lineNode = SCNNode(geometry: lineGeometry)
         lineNode.position = midPosition
-        lineNode.look(at: positionB, up: self.rootNode.worldUp, localFront: lineNode.worldUp)
+        lineNode.look(at: positionB, up: SCNVector3(0,1,0), localFront: lineNode.worldUp)
         self.rootNode.addChildNode(lineNode)
     }
     
@@ -132,11 +134,12 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
 
         let lineNode = SCNNode(geometry: lineGeometry)
         lineNode.position = midPosition
-        lineNode.look(at: positionB, up: self.rootNode.worldUp, localFront: SCNVector3(0,0,1))
+        lineNode.look(at: positionB, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
         self.rootNode.addChildNode(lineNode)
     }
     
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        // Update camera position every frame
         self.cameraNode.position = self.cameraPos.coords
     }
     
