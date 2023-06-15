@@ -36,6 +36,8 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         
         self.car1 = SCNNode(mdlObject: carObject)
         self.car2 = SCNNode(mdlObject: carObject)
+//        self.car1 = SCNNode(geometry: SCNSphere(radius: 0.5))
+//        self.car2 = SCNNode(geometry: SCNSphere(radius: 0.5))
         
         super.init()
         
@@ -55,12 +57,10 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
                 
         self.car1.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
         self.car1.position = self.car1Pos.positions[0].coords
-        self.car1.opacity = 0.9
         self.rootNode.addChildNode(self.car1)
         
         self.car2.scale = SCNVector3(x: 0.75, y: 0.75, z: 0.75)
         self.car2.position = self.car2Pos.positions[0].coords
-        self.car2.opacity = 0.9
         self.rootNode.addChildNode(self.car2)
         
         self.cameraNode.camera = SCNCamera()
@@ -92,15 +92,16 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
 
             /*
              Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
-             to look at the destination coordinate. These 2 actions are exectured in parallel.
+             (if present) to look at the destination coordinate. These 2 actions are exectured in parallel.
             */
+          
             let lookWithDurationAction = SCNAction.run { node in
                 SCNTransaction.begin()
                 SCNTransaction.animationDuration = dur
                 node.look(at: SCNVector3(x: x, y: y, z: z), up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
                 SCNTransaction.commit()
             }
-            
+
             let group = SCNAction.group([
                 SCNAction.move(to: SCNVector3(x: x, y: y, z: z), duration: dur),
                 lookWithDurationAction

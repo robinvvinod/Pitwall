@@ -11,8 +11,8 @@ import Accelerate
 
 class CameraPosition {
     // Stores the x, y and z angles for the cameraPos
-    var coords = SCNVector3(x: 0, y: 3, z: 15)
-    let radius: Float = 15 // Radius of the sphere in which the camera moves around car
+    var coords = SCNVector3(x: -10, y: 10, z: 20)
+    let radius: Float = 20 // Radius of the sphere in which the camera moves around car
 }
 
 struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
@@ -75,10 +75,8 @@ struct LapComparisonView: View {
     }
     
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
-//    @State private var prevY: Double = 0
     @State private var zSign: Bool = true // true is +ve z, false is -ve z
-    private let xModifier: Float = 0.05 // Scales gesture distance to change in coords of cameraPos
-//    private let yModifier: Float = 0.0001
+    private let xModifier: Float = 0.5 // Scales gesture distance to change in coords of cameraPos
     
     var sceneView: some View {
         let scene = ComparisonScene(car1Pos: car1Pos, car2Pos: car2Pos, cameraPos: cameraPos)
@@ -92,12 +90,6 @@ struct LapComparisonView: View {
                         } else {
                             cameraPos.coords.x += zSign ? -xModifier : xModifier
                         }
-
-//                        if translate.translation.height > prevY { // Moving to the north
-//                            cameraPos.coords.y += yModifier * Float(abs(translate.translation.height - prevY))
-//                        } else {
-//                            cameraPos.coords.y -= yModifier * Float(abs(translate.translation.height - prevY))
-//                        }
 
                         prevX = translate.translation.width
 
@@ -122,12 +114,6 @@ struct LapComparisonView: View {
                             zSign = true
                             cameraPos.coords.x = -cameraPos.radius
                         }
-
-//                        if cameraPos.coords.y > cameraPos.radius {
-//                            cameraPos.coords.y = cameraPos.radius
-//                        } else if cameraPos.coords.y < 0.05 {
-//                            cameraPos.coords.y = 0.05
-//                        }
 
                         // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.coords.z should be negative
                         cameraPos.coords.z = zSign ? sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2)) : -sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2))
@@ -155,15 +141,8 @@ struct LapComparisonView: View {
                 
                 dataStore.positions.append(
                     SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp)
-                ) // Timestamp will be 0 for the first position
+                )
             }
-        }
-    }
-    
-    private func calculateDurations(carPos: CarPositions) {
-        // Once all resampling is done, calculate final durations
-        for i in 1...(carPos.positions.count - 1) {
-            carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
         }
     }
     
@@ -219,7 +198,15 @@ struct LapComparisonView: View {
         /*
          t: Float is the timestamp for which the unknown coord should be calculated. The linear equation of a line formed by
          (time1, x1/y1/z1) and (time2, x2/y2/z2) is calculated using subtraction method of solving simult. eqns.
+         
+         m is gradient, c is y-intercept
+         t₁ = mx₁ + c --> (1)
+         t₂ = mx₂ + c --> (2)
+         (1) - (2)
+         m = (t₁ - t₂) / (x₁ - x₂)
+         c = (t₁ - mx₁)
         */
+        
         let numerator = Float(prev.timestamp - next.timestamp)
         var x: Float = 0
         var y: Float = 0
@@ -261,25 +248,28 @@ struct LapComparisonView: View {
         var xSmooth: [Float] = []
         var ySmooth: [Float] = []
         var zSmooth: [Float] = []
-        var tSmooth: [Float] = []
 
         for i in 0...(carPos.positions.count - 1) {
             xSmooth.append(carPos.positions[i].coords.x)
             ySmooth.append(carPos.positions[i].coords.y)
             zSmooth.append(carPos.positions[i].coords.z)
-            tSmooth.append(Float(carPos.positions[i].timestamp))
         }
 
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-        tSmooth = vDSP.convolve(tSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
 
         for i in 0...(xSmooth.count - 1) {
             carPos.positions[i].coords.x = xSmooth[i]
             carPos.positions[i].coords.y = ySmooth[i]
             carPos.positions[i].coords.z = zSmooth[i]
-            carPos.positions[i].timestamp = Double(tSmooth[i])
+        }
+    }
+    
+    private func calculateDurations(carPos: CarPositions) {
+        // Once all resampling is done, calculate final durations
+        for i in 1...(carPos.positions.count - 1) {
+            carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
         }
     }
 }
