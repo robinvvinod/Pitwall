@@ -57,9 +57,12 @@ struct LapComparisonView: View {
                     self.getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
                     self.getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
                     
-                    self.resample(reference: car1Pos, target: car2Pos)
-                    self.resample(reference: car2Pos, target: car1Pos)
-
+//                    self.resampleToReference(reference: car1Pos, target: car2Pos)
+//                    self.resampleToReference(reference: car2Pos, target: car1Pos)
+                    
+                    self.resampleToFrequency(target: car1Pos, frequency: 10)
+                    self.resampleToFrequency(target: car2Pos, frequency: 10)
+                    
                     self.smoothConvolve(carPos: car1Pos)
                     self.smoothConvolve(carPos: car2Pos)
                     
@@ -146,16 +149,16 @@ struct LapComparisonView: View {
         }
     }
     
-    private func resample(reference: CarPositions, target: CarPositions) {
+    private func resampleToReference(reference: CarPositions, target: CarPositions) {
         /*
+         All timestamps in reference will be added to target, if not already present.
+         
          Resampling ensures that both cars will have the same number of position data points. There is no loss of accuracy
          when resampling as linear interpolation is done between non-interpolated data to calculate missing data points. This would have
-         otherwise been done anyway since the SCNAction.move(duration:) is a linear animation.
+         been done anyway since the SCNAction.move(duration:) is a linear animation. Loss of accuracy comes during the smoothing of data.
          
          The resampled data ensures that both cars will have SCNAction.move() being called in parallel and for the same number of
          times, preventing processing delays from adding up and diverging the gap between the cars.
-         
-         All timestamps in reference will be added to target, if not already present.
         */
         
         for refItem in reference.positions {
@@ -172,6 +175,32 @@ struct LapComparisonView: View {
             }
         }
         self.fillMissing(carPos: target)
+    }
+    
+    private func resampleToFrequency(target: CarPositions, frequency: Double) {
+        /*
+         Resamples data to the specified frequency (Hz). First and last data points are kept intact. Refer to
+         resampleToReference() for explanation on why resampling is necessary
+        */
+        
+        let lastTimestamp = target.positions.last?.timestamp ?? 0
+        var curTime = 1 / frequency
+        
+        while curTime < lastTimestamp {
+            let item = SinglePosition(coords: SCNVector3(), timestamp: curTime, interpolated: true)
+            let index = target.positions.insertionIndexOf(elem: item) {$0 < $1}
+            target.positions.insert(item, at: index)
+            curTime += 0.1
+        }
+        
+        self.fillMissing(carPos: target)
+        
+        // Preserve first and last data points
+        for i in stride(from: target.positions.count - 2, to: 1, by: -1) {
+            if target.positions[i].interpolated == false {
+                target.positions.remove(at: i)
+            }
+        }
     }
     
     private func fillMissing(carPos: CarPositions) {
