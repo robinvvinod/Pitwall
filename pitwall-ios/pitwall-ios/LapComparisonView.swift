@@ -41,12 +41,15 @@ struct LapComparisonView: View {
     
     let selectedDriverAndLaps: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int)) // Initialised by caller of view
     
-    @EnvironmentObject var processor: DataProcessor
-    @State var car1Pos = CarPositions()
-    @State var car2Pos = CarPositions()
-    @State var cameraPos = CameraPosition()
+    @EnvironmentObject private var processor: DataProcessor
+    @State private var car1Pos = CarPositions()
+    @State private var car2Pos = CarPositions()
+    @State private var cameraPos = CameraPosition()
+    @State private var car1Seq = SCNAction()
+    @State private var car2Seq = SCNAction()
+    @State private var trackNode = SCNNode()
 
-    @State var dataLoaded: Bool = false
+    @State private var dataLoaded: Bool = false
     
     var body: some View {
         if dataLoaded {
@@ -54,25 +57,30 @@ struct LapComparisonView: View {
         } else {
             VStack {}
                 .onAppear {
-                    self.getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
-                    self.getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
+                    getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
+                    getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
                     
-//                    self.resampleToReference(reference: car1Pos, target: car2Pos)
-//                    self.resampleToReference(reference: car2Pos, target: car1Pos)
+                    resampleToFrequency(target: car1Pos, frequency: 10)
+                    resampleToFrequency(target: car2Pos, frequency: 10)
                     
-                    self.resampleToFrequency(target: car1Pos, frequency: 10)
-                    self.resampleToFrequency(target: car2Pos, frequency: 10)
+                    smoothConvolve(carPos: car1Pos)
+                    smoothConvolve(carPos: car2Pos)
                     
-                    self.smoothConvolve(carPos: car1Pos)
-                    self.smoothConvolve(carPos: car2Pos)
+                    calculateDurations(carPos: car1Pos)
+                    calculateDurations(carPos: car2Pos)
                     
-                    self.calculateDurations(carPos: car1Pos)
-                    self.calculateDurations(carPos: car2Pos)
+                    car1Seq = generateActionSequence(carPos: car1Pos)
+                    car2Seq = generateActionSequence(carPos: car2Pos)
                     
-                    // TODO: Change this to an error being thrown that notifies user
-                    if (!car1Pos.positions.isEmpty) && (!car2Pos.positions.isEmpty) {
-                        dataLoaded = true
-                    }
+                    // Using lead car coords to generate track
+                    generateTrack(reference: car1Pos, width: 12, offset: 0.5)
+                    
+                    // car1/2Pos is no longer needed after action sequence is created. Deallocating memory
+                    car1Pos = CarPositions()
+                    car2Pos = CarPositions()
+                    
+                    // TODO: Handle an error being thrown that notifies user
+                    dataLoaded = true
             }
         }
     }
@@ -82,7 +90,7 @@ struct LapComparisonView: View {
     private let xModifier: Float = 0.5 // Scales gesture distance to change in coords of cameraPos
     
     var sceneView: some View {
-        let scene = ComparisonScene(car1Pos: car1Pos, car2Pos: car2Pos, cameraPos: cameraPos)
+        let scene = ComparisonScene(car1Seq: car1Seq, car2Seq: car2Seq, cameraPos: cameraPos, trackNode: trackNode)
         return SceneView(scene: scene, options: [.rendersContinuously], delegate: scene)
             .gesture(
                 DragGesture()
@@ -125,7 +133,6 @@ struct LapComparisonView: View {
     }
         
     private func getRawPositions(driver: String, lap: Int, dataStore: CarPositions) {
-        
         // Load position data stored in the driverDatabase. If driver/lap provided does not exist, default value is an empty array
         let posData = processor.driverDatabase[driver]?.laps[String(lap)]?.PositionData ?? []
         // If no position data is available for the lap, or the lap does not exist, throw an error
@@ -138,8 +145,8 @@ struct LapComparisonView: View {
             let coords = posData[i].value.components(separatedBy: ",")
             if coords[0] == "OnTrack" { // Kafka also broadcasts OffTrack coords which we can ignore
                 // All coords are divided by 10 since F1 provides data that is accurate to 1/10th of a meter.
-                let x = (Float(coords[1]) ?? 0) / 10
-                let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
+                let x = (Float(coords[1]) ?? 0) / -10 // - sign is added as Scenekit directions are inverted compared to F1 data
+                let y = (Float(coords[3]) ?? 0) / -10 // y and z coords are swapped between F1 live data and SceneKit
                 let z = (Float(coords[2]) ?? 0) / 10
                 
                 dataStore.positions.append(
@@ -195,7 +202,7 @@ struct LapComparisonView: View {
         
         self.fillMissing(carPos: target)
         
-        // Preserve first and last data points
+        // Preserve first and last data points. All other non-interpolated data is removed
         for i in stride(from: target.positions.count - 2, to: 1, by: -1) {
             if target.positions[i].interpolated == false {
                 target.positions.remove(at: i)
@@ -283,11 +290,11 @@ struct LapComparisonView: View {
             ySmooth.append(carPos.positions[i].coords.y)
             zSmooth.append(carPos.positions[i].coords.z)
         }
-
+        
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
-
+        
         for i in 0...(xSmooth.count - 1) {
             carPos.positions[i].coords.x = xSmooth[i]
             carPos.positions[i].coords.y = ySmooth[i]
@@ -300,5 +307,58 @@ struct LapComparisonView: View {
         for i in 1...(carPos.positions.count - 1) {
             carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
         }
+    }
+    
+    private func generateActionSequence(carPos: CarPositions) -> SCNAction {
+        var seq: [SCNAction] = []
+        for i in 1...(carPos.positions.count - 1) {
+            /*
+             These placeholder vars are needed to avoid the lookWithDurationAction block from using reference-type values of x,y,z from
+             the carPos instance at the time the action is called, instead of the values when the block is instantiated.
+            */
+            let x = carPos.positions[i].coords.x
+            let y = carPos.positions[i].coords.y
+            let z = carPos.positions[i].coords.z
+            let dur = carPos.positions[i].duration
+
+            /*
+             Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
+             (if present) to look at the destination coordinate. These 2 actions are exectured in parallel.
+            */
+            
+            let lookWithDurationAction = SCNAction.run { node in
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = dur
+                node.look(at: SCNVector3(x: x, y: y, z: z), up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+                SCNTransaction.commit()
+            }
+
+            let group = SCNAction.group([
+                SCNAction.move(to: SCNVector3(x: x, y: y, z: z), duration: dur),
+                lookWithDurationAction
+            ])
+            seq.append(group)
+        }
+        return SCNAction.sequence(seq)
+    }
+    
+    private func generateTrack(reference: CarPositions, width: CGFloat, offset: Float) {
+        for i in 0...(reference.positions.count - 2) {
+            let positionA = reference.positions[i].coords
+            let positionB = reference.positions[i+1].coords
+            
+            let vector = SCNVector3(positionA.x - positionB.x, (positionA.y + offset) - (positionB.y + offset), positionA.z - positionB.z)
+            let distance = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)
+            let midPosition = SCNVector3 (x: (positionA.x + positionB.x) / 2, y: (positionA.y + positionB.y) / 2, z: (positionA.z + positionB.z) / 2)
+
+            let boxGeo = SCNBox(width: width, height: 0.01, length: CGFloat(distance), chamferRadius: 0)
+            boxGeo.firstMaterial!.diffuse.contents = UIColor.darkGray
+
+            let boxNode = SCNNode(geometry: boxGeo)
+            boxNode.position = midPosition
+            boxNode.look(at: positionB, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+            self.trackNode.addChildNode(boxNode)
+        }
+        self.trackNode = self.trackNode.flattenedClone()
     }
 }
