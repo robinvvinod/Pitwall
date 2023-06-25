@@ -19,6 +19,9 @@
 		000CFFCC2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */; };
 		000CFFD92A0106F200AAF530 /* KafkaConsumer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */; };
 		00112E532A24CC8800D8BAF8 /* LapComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */; };
+		0019CB5B2A45877900B8460A /* SCNGeometry+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019CB5A2A45877900B8460A /* SCNGeometry+Extensions.swift */; };
+		0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019CB5C2A45879500B8460A /* SCNPathNode.swift */; };
+		0019CB5F2A4587B500B8460A /* SCNVector3+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */; };
 		0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0022E7902A03EF170030BB29 /* DataProcessor.swift */; };
 		003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */; };
 		003AE4252A179C8F00B8EA6C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */; };
@@ -66,6 +69,9 @@
 		000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = pitwall_iosUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KafkaConsumer.swift; sourceTree = "<group>"; };
 		00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapComparisonView.swift; sourceTree = "<group>"; };
+		0019CB5A2A45877900B8460A /* SCNGeometry+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SCNGeometry+Extensions.swift"; sourceTree = "<group>"; };
+		0019CB5C2A45879500B8460A /* SCNPathNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SCNPathNode.swift; sourceTree = "<group>"; };
+		0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SCNVector3+Extensions.swift"; sourceTree = "<group>"; };
 		0022E7902A03EF170030BB29 /* DataProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataProcessor.swift; sourceTree = "<group>"; };
 		003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionInfoView.swift; sourceTree = "<group>"; };
 		003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
@@ -139,6 +145,7 @@
 				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
 				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
 				0094DDB52A296F1200E37522 /* ComparisonScene.swift */,
+				0019CB592A45875E00B8460A /* SCNPath */,
 				00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */,
 				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
 				000CFFD82A0106F200AAF530 /* KafkaConsumer.swift */,
@@ -176,6 +183,16 @@
 				000CFFCB2A0104A700AAF530 /* pitwall_iosUITestsLaunchTests.swift */,
 			);
 			path = "pitwall-iosUITests";
+			sourceTree = "<group>";
+		};
+		0019CB592A45875E00B8460A /* SCNPath */ = {
+			isa = PBXGroup;
+			children = (
+				0019CB5A2A45877900B8460A /* SCNGeometry+Extensions.swift */,
+				0019CB5C2A45879500B8460A /* SCNPathNode.swift */,
+				0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */,
+			);
+			path = SCNPath;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -312,6 +329,7 @@
 				00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */,
 				005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */,
 				003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */,
+				0019CB5B2A45877900B8460A /* SCNGeometry+Extensions.swift in Sources */,
 				00112E532A24CC8800D8BAF8 /* LapComparisonView.swift in Sources */,
 				0094DDB62A296F1200E37522 /* ComparisonScene.swift in Sources */,
 				00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */,
@@ -321,12 +339,14 @@
 				000819692A05444100F729F2 /* DataStore.swift in Sources */,
 				0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */,
 				00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */,
+				0019CB5F2A4587B500B8460A /* SCNVector3+Extensions.swift in Sources */,
 				003AE4252A179C8F00B8EA6C /* LeaderboardView.swift in Sources */,
 				003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */,
 				000CFFAC2A0104A600AAF530 /* ContentView.swift in Sources */,
 				000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */,
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,
 				0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */,
+				0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

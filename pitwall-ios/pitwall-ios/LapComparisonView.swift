@@ -59,23 +59,22 @@ struct LapComparisonView: View {
                 .onAppear {
                     getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
                     getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
-                    
+                                        
                     resampleToFrequency(target: car1Pos, frequency: 10)
                     resampleToFrequency(target: car2Pos, frequency: 10)
-                    
+                
                     smoothConvolve(carPos: car1Pos)
                     smoothConvolve(carPos: car2Pos)
                     
+                    self.trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
+                                        
                     calculateDurations(carPos: car1Pos)
                     calculateDurations(carPos: car2Pos)
                     
                     car1Seq = generateActionSequence(carPos: car1Pos)
                     car2Seq = generateActionSequence(carPos: car2Pos)
                     
-                    // Using lead car coords to generate track
-                    generateTrack(reference: car1Pos, width: 12, offset: 0.5)
-                    
-                    // car1/2Pos is no longer needed after action sequence is created. Deallocating memory
+                    // carPos is no longer needed after action sequence is created. Deallocating memory
                     car1Pos = CarPositions()
                     car2Pos = CarPositions()
                     
@@ -146,7 +145,7 @@ struct LapComparisonView: View {
             if coords[0] == "OnTrack" { // Kafka also broadcasts OffTrack coords which we can ignore
                 // All coords are divided by 10 since F1 provides data that is accurate to 1/10th of a meter.
                 let x = (Float(coords[1]) ?? 0) / -10 // - sign is added as Scenekit directions are inverted compared to F1 data
-                let y = (Float(coords[3]) ?? 0) / -10 // y and z coords are swapped between F1 live data and SceneKit
+                let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
                 let z = (Float(coords[2]) ?? 0) / 10
                 
                 dataStore.positions.append(
@@ -277,7 +276,7 @@ struct LapComparisonView: View {
             z = (t - c) / m
         }
         
-        return SCNVector3(x: Float(x), y: Float(y), z: Float(z))
+        return SCNVector3(x: x, y: y, z: z)
     }
     
     private func smoothConvolve(carPos: CarPositions) {
@@ -290,6 +289,11 @@ struct LapComparisonView: View {
             ySmooth.append(carPos.positions[i].coords.y)
             zSmooth.append(carPos.positions[i].coords.z)
         }
+        
+        // Padding to ensure output is same size as input
+        xSmooth = [Float](repeating: xSmooth[0], count: 9) + xSmooth
+        ySmooth = [Float](repeating: ySmooth[0], count: 9) + ySmooth
+        zSmooth = [Float](repeating: zSmooth[0], count: 9) + zSmooth
         
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
@@ -340,25 +344,5 @@ struct LapComparisonView: View {
             seq.append(group)
         }
         return SCNAction.sequence(seq)
-    }
-    
-    private func generateTrack(reference: CarPositions, width: CGFloat, offset: Float) {
-        for i in 0...(reference.positions.count - 2) {
-            let positionA = reference.positions[i].coords
-            let positionB = reference.positions[i+1].coords
-            
-            let vector = SCNVector3(positionA.x - positionB.x, (positionA.y + offset) - (positionB.y + offset), positionA.z - positionB.z)
-            let distance = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)
-            let midPosition = SCNVector3 (x: (positionA.x + positionB.x) / 2, y: (positionA.y + positionB.y) / 2, z: (positionA.z + positionB.z) / 2)
-
-            let boxGeo = SCNBox(width: width, height: 0.01, length: CGFloat(distance), chamferRadius: 0)
-            boxGeo.firstMaterial!.diffuse.contents = UIColor.darkGray
-
-            let boxNode = SCNNode(geometry: boxGeo)
-            boxNode.position = midPosition
-            boxNode.look(at: positionB, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
-            self.trackNode.addChildNode(boxNode)
-        }
-        self.trackNode = self.trackNode.flattenedClone()
     }
 }
