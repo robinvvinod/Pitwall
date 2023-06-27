@@ -57,20 +57,21 @@ struct LapComparisonView: View {
         } else {
             VStack {}
                 .onAppear {
+                    // TODO: Do work in non-main thread
                     getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
                     getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
                                         
                     resampleToFrequency(target: car1Pos, frequency: 10)
                     resampleToFrequency(target: car2Pos, frequency: 10)
-                
-                    smoothConvolve(carPos: car1Pos)
-                    smoothConvolve(carPos: car2Pos)
                     
-                    self.trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
+                    savitskyGolayFilter(carPos: car1Pos)
+                    savitskyGolayFilter(carPos: car2Pos)
+                    
+                    trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
                                         
                     calculateDurations(carPos: car1Pos)
                     calculateDurations(carPos: car2Pos)
-                    
+
                     car1Seq = generateActionSequence(carPos: car1Pos)
                     car2Seq = generateActionSequence(carPos: car2Pos)
                     
@@ -134,8 +135,8 @@ struct LapComparisonView: View {
     private func getRawPositions(driver: String, lap: Int, dataStore: CarPositions) {
         // Load position data stored in the driverDatabase. If driver/lap provided does not exist, default value is an empty array
         let posData = processor.driverDatabase[driver]?.laps[String(lap)]?.PositionData ?? []
-        // If no position data is available for the lap, or the lap does not exist, throw an error
-        if posData.count == 0 {
+        
+        if posData.count == 0 { // If no position data is available for the lap, or the lap does not exist, throw an error
             return // TODO: Throw an error instead of simply returning?
         }
         
@@ -180,7 +181,7 @@ struct LapComparisonView: View {
                 target.positions[index].interpolated = true
             }
         }
-        self.fillMissing(carPos: target)
+        fillMissing(carPos: target)
     }
     
     private func resampleToFrequency(target: CarPositions, frequency: Double) {
@@ -199,7 +200,7 @@ struct LapComparisonView: View {
             curTime += 0.1
         }
         
-        self.fillMissing(carPos: target)
+        fillMissing(carPos: target)
         
         // Preserve first and last data points. All other non-interpolated data is removed
         for i in stride(from: target.positions.count - 2, to: 1, by: -1) {
@@ -219,7 +220,7 @@ struct LapComparisonView: View {
                 var j = i
                 while j < carPos.positions.count { // Finding next non-interpolated data point
                     if carPos.positions[j].interpolated == false {
-                        carPos.positions[i].coords = self.linearInterpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
+                        carPos.positions[i].coords = linearInterpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
                         break
                     } else {
                         j += 1
@@ -298,6 +299,48 @@ struct LapComparisonView: View {
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
+        
+        for i in 0...(xSmooth.count - 1) {
+            carPos.positions[i].coords.x = xSmooth[i]
+            carPos.positions[i].coords.y = ySmooth[i]
+            carPos.positions[i].coords.z = zSmooth[i]
+        }
+    }
+    
+    private func savitskyGolayFilter(carPos: CarPositions) {
+        /*
+         A Savitsky-Golay filter is applied to the resampled position data to smooth out noise in the data. The filter
+         is applied within a window length of 20 (~1s before & after current point is used to calculate current point) and a
+         polyorder of 2 (quadratic).
+         
+         https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
+         For equally spaced data points, an analytical solution to the least-squares equations can be found, in the form of the
+         convolution coefficients.
+         
+         NOTE: Can only be used if data is equally spaced. Call resampleToFrequency() before calling this function.
+        */
+        
+        var xSmooth: [Float] = []
+        var ySmooth: [Float] = []
+        var zSmooth: [Float] = []
+
+        for i in 0...(carPos.positions.count - 1) {
+            xSmooth.append(carPos.positions[i].coords.x)
+            ySmooth.append(carPos.positions[i].coords.y)
+            zSmooth.append(carPos.positions[i].coords.z)
+        }
+
+        // Padding to nearest boundary values to ensure output is same size as input
+        xSmooth = [Float](repeating: xSmooth[0], count: 10) + xSmooth + [Float](repeating: xSmooth[xSmooth.count - 1], count: 10)
+        ySmooth = [Float](repeating: ySmooth[0], count: 10) + ySmooth + [Float](repeating: ySmooth[ySmooth.count - 1], count: 10)
+        zSmooth = [Float](repeating: zSmooth[0], count: 10) + zSmooth + [Float](repeating: zSmooth[zSmooth.count - 1], count: 10)
+        
+        // Savitsky Golay coefficients calculated using window length = 20, polyorder = 2
+        let kernel: [Float] = [-0.05795455,-0.02386364,0.00643939,0.03295455,0.05568182,0.07462121,0.08977273,0.10113636,0.10871212,0.1125,0.1125,0.10871212,0.10113636,0.08977273,0.07462121,0.05568182,0.03295455,0.00643939,-0.02386364,-0.05795455]
+        
+        xSmooth = vDSP.convolve(xSmooth, withKernel: kernel)
+        ySmooth = vDSP.convolve(ySmooth, withKernel: kernel)
+        zSmooth = vDSP.convolve(zSmooth, withKernel: kernel)
         
         for i in 0...(xSmooth.count - 1) {
             carPos.positions[i].coords.x = xSmooth[i]
