@@ -37,6 +37,7 @@ class Lap {
     var PitIn: (value: Bool, timestamp: Double) = (false, 0)
     var PitOut: (value: Bool, timestamp: Double) = (false, 0)
     var Deleted: Bool = false
+    var StartTime: Double = 0
 }
 
 class Driver {

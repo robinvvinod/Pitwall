@@ -90,6 +90,8 @@ class DataStore: ObservableObject {
         switch topic {
         case "CurrentLap":
             driverObject.CurrentLap = Int(data) ?? 0
+            let timestamp = Double(value.components(separatedBy: "::")[1]) ?? 0
+            driverObject.laps[data, setDefault: Lap(TyreType: (driverObject.TyreType,0))].StartTime = timestamp
         case "NumberOfPitStops":
             driverObject.NumberOfPitStops = Int(data) ?? 0
         case "Position":

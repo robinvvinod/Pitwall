@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SceneKit
 
 extension String {
     func base64Encoded() -> String? {
@@ -75,5 +76,18 @@ func convertLapTimeToSeconds(time: String) -> Float {
 extension FloatingPoint {
     func isNearlyEqual(to value: Self) -> Bool {
         return abs(self - value) <= .ulpOfOne
+    }
+}
+
+extension SCNVector3 {
+    static func !=(lhs: SCNVector3, rhs: SCNVector3) -> Bool {
+        if lhs.x == rhs.x {
+            if lhs.y == rhs.y {
+                if lhs.z == rhs.z {
+                    return false
+                }
+            }
+        }
+        return true
     }
 }

@@ -1,11 +1,11 @@
 //
-//  LapComparisonView.swift
+//  LapComparisonViewModel.swift
 //  pitwall-ios
 //
-//  Created by Robin on 29/5/23.
+//  Created by Robin on 2/7/23.
 //
 
-import SwiftUI
+import Foundation
 import SceneKit
 import Accelerate
 
@@ -37,110 +37,80 @@ class CarPositions { // Contains all the positions of a given car for a given la
     var positions: [SinglePosition] = []
 }
 
-struct LapComparisonView: View {
+class LapComparisonViewModel: ObservableObject {
     
-    let selectedDriverAndLaps: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int)) // Initialised by caller of view
+    var cameraPos = CameraPosition()
+    var car1Seq = SCNAction()
+    var car2Seq = SCNAction()
+    var trackNode = SCNNode()
+    var startPos: (SCNVector3, SCNVector3)?
+    private var car1Pos = CarPositions()
+    private var car2Pos = CarPositions()
+    private var processor: DataProcessor?
+    @Published var dataLoaded = false
     
-    @EnvironmentObject private var processor: DataProcessor
-    @State private var car1Pos = CarPositions()
-    @State private var car2Pos = CarPositions()
-    @State private var cameraPos = CameraPosition()
-    @State private var car1Seq = SCNAction()
-    @State private var car2Seq = SCNAction()
-    @State private var trackNode = SCNNode()
-
-    @State private var dataLoaded: Bool = false
-    
-    var body: some View {
-        if dataLoaded {
-            sceneView
-        } else {
-            VStack {}
-                .onAppear {
-                    // TODO: Do work in non-main thread
-                    getRawPositions(driver: selectedDriverAndLaps.car1.driver, lap: selectedDriverAndLaps.car1.lap, dataStore: car1Pos)
-                    getRawPositions(driver: selectedDriverAndLaps.car2.driver, lap: selectedDriverAndLaps.car2.lap, dataStore: car2Pos)
-                                        
-                    resampleToFrequency(target: car1Pos, frequency: 10)
-                    resampleToFrequency(target: car2Pos, frequency: 10)
-                    
-                    savitskyGolayFilter(carPos: car1Pos)
-                    savitskyGolayFilter(carPos: car2Pos)
-                    
-                    trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
-                                        
-                    calculateDurations(carPos: car1Pos)
-                    calculateDurations(carPos: car2Pos)
-
-                    car1Seq = generateActionSequence(carPos: car1Pos)
-                    car2Seq = generateActionSequence(carPos: car2Pos)
-                    
-                    // carPos is no longer needed after action sequence is created. Deallocating memory
-                    car1Pos = CarPositions()
-                    car2Pos = CarPositions()
-                    
-                    // TODO: Handle an error being thrown that notifies user
-                    dataLoaded = true
+    func load(processor: DataProcessor, selDriver: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int))) {
+        self.processor = processor
+        let lap1 = processor.driverDatabase[selDriver.car1.driver]?.laps[String(selDriver.car1.lap)] // Get lap object
+        let lap2 = processor.driverDatabase[selDriver.car2.driver]?.laps[String(selDriver.car2.lap)]
+        
+        if let lap1, let lap2 {
+            if (lap1.PositionData.isEmpty) || (lap2.PositionData.isEmpty) {
+                return
+                // TODO: Throw error
+            }
+            
+            // Faster lap is set as car1 and is the reference from which start/end point is set & track is generated
+            if convertLapTimeToSeconds(time: lap1.LapTime.value) < convertLapTimeToSeconds(time: lap2.LapTime.value) {
+                loadLapData(lead: lap1, chase: lap2)
+            } else {
+                loadLapData(lead: lap2, chase: lap1)
+            }
+            
+            car1Seq = generateActionSequence(carPos: car1Pos)
+            car2Seq = generateActionSequence(carPos: car2Pos)
+            
+            startPos = (car1Pos.positions[0].coords, car2Pos.positions[0].coords)
+            
+            trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
+            car1Pos = CarPositions() // carPos is no longer needed, deallocating memory
+            car2Pos = CarPositions()
+            
+            DispatchQueue.main.async {
+                self.dataLoaded = true
             }
         }
     }
     
-    @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
-    @State private var zSign: Bool = true // true is +ve z, false is -ve z
-    private let xModifier: Float = 0.5 // Scales gesture distance to change in coords of cameraPos
-    
-    var sceneView: some View {
-        let scene = ComparisonScene(car1Seq: car1Seq, car2Seq: car2Seq, cameraPos: cameraPos, trackNode: trackNode)
-        return SceneView(scene: scene, options: [.rendersContinuously], delegate: scene)
-            .gesture(
-                DragGesture()
-                    .onChanged { translate in
-
-                        if translate.translation.width > prevX { // Moving to the east
-                            cameraPos.coords.x += zSign ? xModifier : -xModifier // controls direction of magnitude change of cameraPos.coords.x
-                        } else {
-                            cameraPos.coords.x += zSign ? -xModifier : xModifier
-                        }
-
-                        prevX = translate.translation.width
-
-                        /*
-                            This block ensures that cameraPos.coords.x is always within [-cameraPos.radius, cameraPos.radius]
-                            If cameraPos.coords.x > cameraPos.radius, cameraPos.coords.x will decrease until -cameraPos.radius
-                            If cameraPos.coords.x < -cameraPos.radius, cameraPos.coords.x will increase until cameraPos.radius
-                            Direction of change is determined by zSign
-
-                            This allows for "rolling" over of cameraPos.coords.x when crossing boundary points
-                        */
-                         if (cameraPos.coords.x > cameraPos.radius) && (zSign == true) {
-                            zSign = false
-                            cameraPos.coords.x = cameraPos.radius
-                        } else if (cameraPos.coords.x > cameraPos.radius) && (zSign == false) {
-                            zSign = true
-                            cameraPos.coords.x = cameraPos.radius
-                        } else if (cameraPos.coords.x < -cameraPos.radius) && (zSign == true) {
-                            zSign = false
-                            cameraPos.coords.x = -cameraPos.radius
-                        } else if (cameraPos.coords.x < -cameraPos.radius) && (zSign == false) {
-                            zSign = true
-                            cameraPos.coords.x = -cameraPos.radius
-                        }
-
-                        // If zSign is -ve, cameraPos is "behind" the point of reference and cameraPos.coords.z should be negative
-                        cameraPos.coords.z = zSign ? sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2)) : -sqrt(pow(cameraPos.radius,2) - pow(cameraPos.coords.x, 2))
-                    }
-            )
+    private func loadLapData(lead: Lap, chase: Lap) {
+        getRawPositions(lap: lead, carPos: car1Pos)
+        getRawPositions(lap: chase, carPos: car2Pos)
+        
+        syncStartPoints()
+        syncEndPoint(lap: lead, carPos: car1Pos)
+        syncEndPoint(lap: chase, carPos: car2Pos)
+        
+        resampleToFrequency(carPos: car1Pos, frequency: 10)
+        resampleToFrequency(carPos: car2Pos, frequency: 10)
+        
+        savitskyGolayFilter(carPos: car1Pos)
+        savitskyGolayFilter(carPos: car2Pos)
+        
+        calculateDurations(carPos: car1Pos)
+        calculateDurations(carPos: car2Pos)
     }
+    
+    private func getRawPositions(lap: Lap, carPos: CarPositions) {
+        /*
+         The first position data may not represent the coords of the car the moment it crossed the start finish line due to the low sample rate
+         At t = 0, the car should be exactly on the SL line. (First timestamp - Lap start timestamp) is used to offset all timestamps such that
+         they are now relative to t = 0 when the car crossed the SL line.
+         We interpolate the coords at which the car crossed the start finish line by drawing a line between the first two coords of the car and
+         finding the coords when t = 0
+        */
         
-    private func getRawPositions(driver: String, lap: Int, dataStore: CarPositions) {
-        // Load position data stored in the driverDatabase. If driver/lap provided does not exist, default value is an empty array
-        let posData = processor.driverDatabase[driver]?.laps[String(lap)]?.PositionData ?? []
-        
-        if posData.count == 0 { // If no position data is available for the lap, or the lap does not exist, throw an error
-            return // TODO: Throw an error instead of simply returning?
-        }
-        
-        // Loop through the raw position data array and store data inside CarPositions class
+        let posData = lap.PositionData
+        let delta = posData[0].timestamp - lap.StartTime
         for i in 0...(posData.count - 1) {
             let coords = posData[i].value.components(separatedBy: ",")
             if coords[0] == "OnTrack" { // Kafka also broadcasts OffTrack coords which we can ignore
@@ -149,11 +119,135 @@ struct LapComparisonView: View {
                 let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
                 let z = (Float(coords[2]) ?? 0) / 10
                 
-                dataStore.positions.append(
-                    SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp)
+                carPos.positions.append(
+                    SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp + delta)
                 )
             }
         }
+        
+        let startPoint = linearInterpolate(prev: carPos.positions[0], next: carPos.positions[1], t: 0)
+        carPos.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+    }
+    
+    private func syncStartPoints() {
+        /*
+         Lap start time is calculated using the timestamp the car left the pits / timestamp of sector 3 time of previous lap
+         Due to delays in the sensors detecting the above, lap start time is not always consistent between laps/cars
+         As cars are usually travelling >300km/h at the SL line, these small inconsistencies can cause the start points of two
+         cars to be visibly different. Hence, there is a need to sync the start points
+         
+         The chase cars start point is synced to the lead cars. The closest point to the lead cars start point in the path of the chase
+         car is set as it's start point.
+        */
+        let lead = car1Pos
+        let chase = car2Pos
+        
+        func distance(v: SCNVector3) -> Float { // Returns distance of point from origin
+            return sqrtf(powf(v.x, 2) + powf(v.z, 2))
+        }
+        
+        let refPoint = lead.positions[0].coords // Lead cars start point is used as the reference
+        // Point 1 and 2 are the closest two points to the lead cars start point
+        var point1: SinglePosition
+        var point2: SinglePosition
+        
+        let dist1 = distance(v: refPoint)
+        var dist2 = distance(v: chase.positions[0].coords)
+        
+        
+        if dist2 > dist1 { // Chase cars start point is after lead start point
+            point1 = chase.positions[0]
+            point2 = chase.positions[1]
+        } else { // Chase cars start point is before lead start point
+            var count = 0
+            while dist2 < dist1 {
+                count += 1
+                dist2 = distance(v: chase.positions[count].coords)
+            }
+            point1 = chase.positions[count-1]
+            point2 = chase.positions[count]
+        }
+        
+        /*
+         A line is drawn that contains point 1 and 2. The point on the line closest to the lead cars start point is calculated by finding
+         the normal to the line that passes through lead cars start point. This is the new start point of the chase car. The time at which
+         the car passes through this new start point is calculated. All the chase timestamps are offset such that they are relative to the
+         new start point.
+         
+         The line is assumed to be 2D (x,z axes) for simplicity of calculation
+        */
+        
+        let gradient = (point1.coords.z - point2.coords.z) / (point1.coords.x - point2.coords.x)
+        let yIntrcpt = point1.coords.z - (gradient * point1.coords.x)
+        
+        let gradientNormal = -(1/gradient)
+        let yIntrcptNormal = refPoint.z - (gradientNormal * refPoint.x) // The normal which passes through lead start point is calculated
+        
+        /*
+         The intersection between line and normal is used to calculate new start point
+         z = m₁x + c₁ --> (line)
+         z = m₂x + c₂ --> (normal)
+         At insersection point:
+         m₁x + c₁ = m₂x + c₂
+         (m₁ - m₂)x = c₂ - c₁
+         x = (c₂ - c₁) / (m₁ - m₂)
+        */
+        let x = (yIntrcpt - yIntrcptNormal) / (gradientNormal - gradient)
+        let z = (gradient * x) + yIntrcpt
+        
+        var t: Float
+        var m: Float
+        var c: Float
+        let numerator = point1.timestamp - point2.timestamp
+        m = Float(numerator) / (point1.coords.x - point2.coords.x)
+        c = Float(point1.timestamp) - (m * point1.coords.x)
+        t = (m*x) + c // Time of new start point relative to old start point
+        
+        for i in 0...(chase.positions.count - 1) {
+            chase.positions[i].timestamp -= Double(t) // Offset all timestamps to be relative to new start point
+        }
+        
+        let startPoint = SCNVector3(x: x, y: chase.positions[0].coords.y, z: z)
+        chase.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+    }
+    
+    private func syncEndPoint(lap: Lap, carPos: CarPositions) {
+        // Setting end point timestamp to be equal to total lap time
+        let lapTime = Double(convertLapTimeToSeconds(time: lap.LapTime.value))
+        var count = carPos.positions.count - 1
+        var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+        /*
+         In the backend, the lap start timestamps are used to determine which lap a given position data
+         belongs to. Due to possible delays in receiving this new lap timestamp, it is possible that that the
+         position data contains values for the next lap which was wrongly attributed to the current lap. Hence it is possible for
+         (last timestamp - first timestamp) > (laptime). We can remove any position data for which this statement is true
+        */
+        while delta > lapTime {
+            carPos.positions.remove(at: count)
+            count -= 1
+            delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+        }
+        
+        // Similar technique to syncStartPoints() is used to find closest point in cars path to the start point.
+        // Car should be at this new point at timestamp = laptime
+        
+        let refPoint = carPos.positions[0].coords
+        let point1 = carPos.positions[count].coords
+        let point2 = carPos.positions[count-1].coords
+        
+        let gradient = (point1.z - point2.z) / (point1.x - point2.x)
+        let yIntrcpt = point1.z - (gradient * point1.x)
+        
+        let gradientNormal = -(1/gradient)
+        let yIntrcptNormal = refPoint.z - (gradientNormal * refPoint.x)
+        
+        let x = (yIntrcpt - yIntrcptNormal) / (gradientNormal - gradient)
+        let z = (gradient * x) + yIntrcpt
+        
+        let lastPoint = SCNVector3(x: x, y: point1.y, z: z)
+        carPos.positions.append(
+            SinglePosition(coords: lastPoint, timestamp: lapTime)
+        )
     }
     
     private func resampleToReference(reference: CarPositions, target: CarPositions) {
@@ -184,28 +278,28 @@ struct LapComparisonView: View {
         fillMissing(carPos: target)
     }
     
-    private func resampleToFrequency(target: CarPositions, frequency: Double) {
+    private func resampleToFrequency(carPos: CarPositions, frequency: Double) {
         /*
          Resamples data to the specified frequency (Hz). First and last data points are kept intact. Refer to
          resampleToReference() for explanation on why resampling is necessary
         */
         
-        let lastTimestamp = target.positions.last?.timestamp ?? 0
+        let lastTimestamp = carPos.positions.last?.timestamp ?? 0
         var curTime = 1 / frequency
         
         while curTime < lastTimestamp {
             let item = SinglePosition(coords: SCNVector3(), timestamp: curTime, interpolated: true)
-            let index = target.positions.insertionIndexOf(elem: item) {$0 < $1}
-            target.positions.insert(item, at: index)
+            let index = carPos.positions.insertionIndexOf(elem: item) {$0 < $1}
+            carPos.positions.insert(item, at: index)
             curTime += 0.1
         }
         
-        fillMissing(carPos: target)
+        fillMissing(carPos: carPos)
         
         // Preserve first and last data points. All other non-interpolated data is removed
-        for i in stride(from: target.positions.count - 2, to: 1, by: -1) {
-            if target.positions[i].interpolated == false {
-                target.positions.remove(at: i)
+        for i in stride(from: carPos.positions.count - 2, to: 1, by: -1) {
+            if carPos.positions[i].interpolated == false {
+                carPos.positions.remove(at: i)
             }
         }
     }
@@ -229,7 +323,7 @@ struct LapComparisonView: View {
             }
         }
     }
-    
+        
     private func linearInterpolate(prev: SinglePosition, next: SinglePosition, t: Float) -> SCNVector3 {
         /*
          t: Float is the timestamp for which the unknown coord should be calculated. The linear equation of a line formed by
@@ -292,9 +386,9 @@ struct LapComparisonView: View {
         }
         
         // Padding to ensure output is same size as input
-        xSmooth = [Float](repeating: xSmooth[0], count: 9) + xSmooth
-        ySmooth = [Float](repeating: ySmooth[0], count: 9) + ySmooth
-        zSmooth = [Float](repeating: zSmooth[0], count: 9) + zSmooth
+        xSmooth = [Float](repeating: xSmooth[0], count: 10) + xSmooth
+        ySmooth = [Float](repeating: ySmooth[0], count: 10) + ySmooth
+        zSmooth = [Float](repeating: zSmooth[0], count: 10) + zSmooth
         
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
@@ -310,7 +404,7 @@ struct LapComparisonView: View {
     private func savitskyGolayFilter(carPos: CarPositions) {
         /*
          A Savitsky-Golay filter is applied to the resampled position data to smooth out noise in the data. The filter
-         is applied within a window length of 20 (~1s before & after current point is used to calculate current point) and a
+         is applied within a window length of 20 (~1s before & after current point is used to calculate interpolated point) and a
          polyorder of 2 (quadratic).
          
          https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
@@ -341,7 +435,7 @@ struct LapComparisonView: View {
         xSmooth = vDSP.convolve(xSmooth, withKernel: kernel)
         ySmooth = vDSP.convolve(ySmooth, withKernel: kernel)
         zSmooth = vDSP.convolve(zSmooth, withKernel: kernel)
-        
+
         for i in 0...(xSmooth.count - 1) {
             carPos.positions[i].coords.x = xSmooth[i]
             carPos.positions[i].coords.y = ySmooth[i]
@@ -367,7 +461,7 @@ struct LapComparisonView: View {
             let y = carPos.positions[i].coords.y
             let z = carPos.positions[i].coords.z
             let dur = carPos.positions[i].duration
-
+            
             /*
              Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
              (if present) to look at the destination coordinate. These 2 actions are exectured in parallel.

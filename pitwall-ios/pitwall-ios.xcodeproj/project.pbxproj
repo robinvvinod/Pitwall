@@ -31,6 +31,7 @@
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
 		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
 		0094DDB62A296F1200E37522 /* ComparisonScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0094DDB52A296F1200E37522 /* ComparisonScene.swift */; };
+		009F22B52A516360001ECA65 /* LapComparisonViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009F22B42A516360001ECA65 /* LapComparisonViewModel.swift */; };
 		00A2B8C32A2DCB6D00B3987C /* SceneKitAssets.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 		00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DDE4F82A2223520022585E /* LapHistoryView.swift */; };
@@ -81,6 +82,7 @@
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
 		0094DDB52A296F1200E37522 /* ComparisonScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonScene.swift; sourceTree = "<group>"; };
+		009F22B42A516360001ECA65 /* LapComparisonViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapComparisonViewModel.swift; sourceTree = "<group>"; };
 		00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */ = {isa = PBXFileReference; lastKnownFileType = wrapper.scnassets; path = SceneKitAssets.scnassets; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 		00DDE4F82A2223520022585E /* LapHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapHistoryView.swift; sourceTree = "<group>"; };
@@ -143,8 +145,7 @@
 				003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */,
 				003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */,
 				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
-				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
-				0094DDB52A296F1200E37522 /* ComparisonScene.swift */,
+				009F22B62A51636E001ECA65 /* LapComparison */,
 				0019CB592A45875E00B8460A /* SCNPath */,
 				00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */,
 				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
@@ -193,6 +194,16 @@
 				0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */,
 			);
 			path = SCNPath;
+			sourceTree = "<group>";
+		};
+		009F22B62A51636E001ECA65 /* LapComparison */ = {
+			isa = PBXGroup;
+			children = (
+				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
+				009F22B42A516360001ECA65 /* LapComparisonViewModel.swift */,
+				0094DDB52A296F1200E37522 /* ComparisonScene.swift */,
+			);
+			path = LapComparison;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -347,6 +358,7 @@
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,
 				0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */,
 				0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */,
+				009F22B52A516360001ECA65 /* LapComparisonViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

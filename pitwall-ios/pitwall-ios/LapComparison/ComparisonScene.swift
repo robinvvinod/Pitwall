@@ -18,7 +18,7 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
     private var car1: SCNNode
     private var car2: SCNNode
     
-    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: CameraPosition, trackNode: SCNNode) {
+    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: CameraPosition, trackNode: SCNNode, startPos: (SCNVector3, SCNVector3)) {
         self.car1Seq = car1Seq
         self.car2Seq = car2Seq
         self.cameraPos = cameraPos
@@ -44,6 +44,9 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         rootNode.addChildNode(self.trackNode)
         rootNode.addChildNode(self.car1)
         rootNode.addChildNode(self.car2)
+        
+        self.car1.position = startPos.0
+        self.car2.position = startPos.1
         
         self.cameraNode.camera = SCNCamera()
         self.cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
