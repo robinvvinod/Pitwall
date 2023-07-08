@@ -8,6 +8,7 @@
 import Foundation
 import SceneKit
 import Accelerate
+import SwiftUI
 
 class CameraPosition {
     // Stores the x, y and z angles for the cameraPos
@@ -43,7 +44,7 @@ class LapComparisonViewModel: ObservableObject {
     var car1Seq = SCNAction()
     var car2Seq = SCNAction()
     var trackNode = SCNNode()
-    var startPos: (SCNVector3, SCNVector3)?
+    var startPos = (p1: SCNVector3(), l1: SCNVector3(), p2: SCNVector3(), l2: SCNVector3())
     private var car1Pos = CarPositions()
     private var car2Pos = CarPositions()
     private var processor: DataProcessor?
@@ -70,7 +71,7 @@ class LapComparisonViewModel: ObservableObject {
             car1Seq = generateActionSequence(carPos: car1Pos)
             car2Seq = generateActionSequence(carPos: car2Pos)
             
-            startPos = (car1Pos.positions[0].coords, car2Pos.positions[0].coords)
+            startPos = (p1: car1Pos.positions[0].coords, l1: car1Pos.positions[1].coords, p2: car2Pos.positions[0].coords, l2: car2Pos.positions[1].coords)
             
             trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
             car1Pos = CarPositions() // carPos is no longer needed, deallocating memory

@@ -35,6 +35,7 @@
 		00A2B8C32A2DCB6D00B3987C /* SceneKitAssets.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */; };
 		00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CC995E2A0CB3B900603682 /* DriverObject.swift */; };
 		00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00DDE4F82A2223520022585E /* LapHistoryView.swift */; };
+		00E55DB72A5907570013D2E2 /* CustomSceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E55DB62A5907570013D2E2 /* CustomSceneView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +87,7 @@
 		00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */ = {isa = PBXFileReference; lastKnownFileType = wrapper.scnassets; path = SceneKitAssets.scnassets; sourceTree = "<group>"; };
 		00CC995E2A0CB3B900603682 /* DriverObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverObject.swift; sourceTree = "<group>"; };
 		00DDE4F82A2223520022585E /* LapHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapHistoryView.swift; sourceTree = "<group>"; };
+		00E55DB62A5907570013D2E2 /* CustomSceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSceneView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +203,7 @@
 			children = (
 				00112E522A24CC8800D8BAF8 /* LapComparisonView.swift */,
 				009F22B42A516360001ECA65 /* LapComparisonViewModel.swift */,
+				00E55DB62A5907570013D2E2 /* CustomSceneView.swift */,
 				0094DDB52A296F1200E37522 /* ComparisonScene.swift */,
 			);
 			path = LapComparison;
@@ -358,6 +361,7 @@
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,
 				0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */,
 				0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */,
+				00E55DB72A5907570013D2E2 /* CustomSceneView.swift in Sources */,
 				009F22B52A516360001ECA65 /* LapComparisonViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

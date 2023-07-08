@@ -33,8 +33,8 @@ struct LapComparisonView: View {
     private let xModifier: Float = 0.5 // Scales gesture distance to change in coords of viewModel.cameraPos
     
     var sceneView: some View {
-        let scene = ComparisonScene(car1Seq: viewModel.car1Seq, car2Seq: viewModel.car2Seq, cameraPos: viewModel.cameraPos, trackNode: viewModel.trackNode, startPos: viewModel.startPos ?? (SCNVector3(), SCNVector3()))
-        return SceneView(scene: scene, options: [.rendersContinuously], delegate: scene)
+        let scene = ComparisonScene(car1Seq: viewModel.car1Seq, car2Seq: viewModel.car2Seq, cameraPos: viewModel.cameraPos, trackNode: viewModel.trackNode, startPos: viewModel.startPos)
+        return CustomSceneView(scene: scene)
             .gesture(
                 DragGesture()
                     .onChanged { translate in

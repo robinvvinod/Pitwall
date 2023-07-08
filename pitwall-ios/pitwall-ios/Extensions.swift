@@ -90,4 +90,8 @@ extension SCNVector3 {
         }
         return true
     }
+    
+    static func ==(lhs: SCNVector3, rhs: SCNVector3) -> Bool {
+        return !(lhs != rhs)
+    }
 }

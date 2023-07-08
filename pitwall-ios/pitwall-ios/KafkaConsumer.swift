@@ -106,7 +106,6 @@ class KafkaConsumer {
     func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
         // TODO: Implement timeout to stop listening for new messages
         while listen {
-            //print("iteration start")
             try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {
                     group.addTask(priority: .userInitiated) {
@@ -118,7 +117,6 @@ class KafkaConsumer {
                     try await processor.addtoQueue(records: records)
                 }
             }
-            //print("iteration end")
         }
         print("Kafka terminated")
     }

@@ -10,19 +10,21 @@ import SceneKit.ModelIO
 
 class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
     
-    private var car1Seq: SCNAction
-    private var car2Seq: SCNAction
+    var car1: SCNNode
+    var car2: SCNNode
+    var car1Seq: SCNAction
+    var car2Seq: SCNAction
+    var startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)
     private var trackNode: SCNNode
     private var cameraPos: CameraPosition
     private var cameraNode: SCNNode
-    private var car1: SCNNode
-    private var car2: SCNNode
     
-    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: CameraPosition, trackNode: SCNNode, startPos: (SCNVector3, SCNVector3)) {
+    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: CameraPosition, trackNode: SCNNode, startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)) {
         self.car1Seq = car1Seq
         self.car2Seq = car2Seq
         self.cameraPos = cameraPos
         self.trackNode = trackNode
+        self.startPos = startPos
         self.cameraNode = SCNNode()
         self.car1 = SCNNode()
         self.car2 = SCNNode()
@@ -45,8 +47,10 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         rootNode.addChildNode(self.car1)
         rootNode.addChildNode(self.car2)
         
-        self.car1.position = startPos.0
-        self.car2.position = startPos.1
+        self.car1.position = startPos.p1
+        self.car1.look(at: startPos.l1, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+        self.car2.position = startPos.p2
+        self.car2.look(at: startPos.l2, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
         
         self.cameraNode.camera = SCNCamera()
         self.cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
@@ -55,9 +59,6 @@ class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
         lookAt.isGimbalLockEnabled = true
         self.cameraNode.constraints = [lookAt]
         self.car1.addChildNode(self.cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
-        
-        self.car1.runAction(car1Seq)
-        self.car2.runAction(car2Seq)
     }
     
     private func loadModel(color: UIColor) -> SCNNode {
