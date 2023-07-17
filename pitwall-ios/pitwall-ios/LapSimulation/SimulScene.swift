@@ -8,7 +8,7 @@
 import SceneKit
 import SceneKit.ModelIO
 
-class ComparisonScene: SCNScene, SCNSceneRendererDelegate {
+class SimulScene: SCNScene, SCNSceneRendererDelegate {
     
     var car1: SCNNode
     var car2: SCNNode

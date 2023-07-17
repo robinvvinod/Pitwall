@@ -9,9 +9,9 @@ import Foundation
 import SwiftUI
 import SceneKit
 
-struct CustomSceneView: UIViewRepresentable {
+struct SimulSceneView: UIViewRepresentable {
     
-    var scene: ComparisonScene
+    var scene: SimulScene
     var view = SCNView()
     
     func makeUIView(context: Context) -> SCNView {
@@ -32,8 +32,8 @@ struct CustomSceneView: UIViewRepresentable {
     
     class Coordinator: NSObject {
         private let view: SCNView
-        private let scene: ComparisonScene
-        init(view: SCNView, scene: ComparisonScene) {
+        private let scene: SimulScene
+        init(view: SCNView, scene: SimulScene) {
             self.view = view
             self.scene = scene
             super.init()

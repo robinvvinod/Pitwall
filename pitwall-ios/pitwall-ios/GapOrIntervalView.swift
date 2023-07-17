@@ -87,7 +87,7 @@ struct GapOrIntervalView: View {
                     .fill(Color.clear)
                     .contentShape(Rectangle())
                     .gesture(
-                        DragGesture()
+                        DragGesture(minimumDistance: 0)
                             .onChanged { value in
                                 let currentX = value.location.x - geometry[chart.plotAreaFrame].origin.x
                                 // Check that drag gesture did not go beyond chart boundaries
@@ -102,19 +102,6 @@ struct GapOrIntervalView: View {
                                 }
                             }
                     )
-                    .onTapGesture { location in
-                        let currentX = location.x - geometry[chart.plotAreaFrame].origin.x
-                        // Check that drag gesture did not go beyond chart boundaries
-                        guard currentX >= 0, currentX < chart.plotAreaSize.width else {return}
-                        // Convert screen x position to chart coordinate space
-                        guard let index = chart.value(atX: currentX, as: Int.self) else {return}
-                        selectedIndex = index
-                        if (index >= 0) && (index < intervalsArray.count) {
-                            selectedPoint = String(intervalsArray[index].gap)
-                        } else {
-                            selectedPoint = nil
-                        }
-                    }
             }
         }
         .chartXAxisLabel("Lap")

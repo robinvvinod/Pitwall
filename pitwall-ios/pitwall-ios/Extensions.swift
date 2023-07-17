@@ -45,6 +45,24 @@ extension Array {
     }
 }
 
+extension Array where Element: Comparable {
+    func binarySearch(elem: Element) -> Int {
+        var lo = 0
+        var hi = self.count - 1
+        while lo <= hi {
+            let mid = (lo + hi)/2
+            if self[mid] < elem {
+                lo = mid + 1
+            } else if elem < self[mid] {
+                hi = mid - 1
+            } else {
+                return mid
+            }
+        }
+        return lo
+    }
+}
+
 // If key does not exist in dict, create it and set it to a default value
 extension Dictionary {
     subscript(key: Key, setDefault defaultValue: @autoclosure () -> Value) -> Value {

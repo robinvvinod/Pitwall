@@ -38,7 +38,7 @@ class CarPositions { // Contains all the positions of a given car for a given la
     var positions: [SinglePosition] = []
 }
 
-class LapComparisonViewModel: ObservableObject {
+class LapSimulationViewModel {
     
     var cameraPos = CameraPosition()
     var car1Seq = SCNAction()
@@ -48,7 +48,6 @@ class LapComparisonViewModel: ObservableObject {
     private var car1Pos = CarPositions()
     private var car2Pos = CarPositions()
     private var processor: DataProcessor?
-    @Published var dataLoaded = false
     
     func load(processor: DataProcessor, selDriver: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int))) {
         self.processor = processor
@@ -76,10 +75,6 @@ class LapComparisonViewModel: ObservableObject {
             trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
             car1Pos = CarPositions() // carPos is no longer needed, deallocating memory
             car2Pos = CarPositions()
-            
-            DispatchQueue.main.async {
-                self.dataLoaded = true
-            }
         }
     }
     
@@ -178,6 +173,7 @@ class LapComparisonViewModel: ObservableObject {
          The line is assumed to be 2D (x,z axes) for simplicity of calculation
         */
         
+        // TODO: Handle case where gradient is undefined
         let gradient = (point1.coords.z - point2.coords.z) / (point1.coords.x - point2.coords.x)
         let yIntrcpt = point1.coords.z - (gradient * point1.coords.x)
         
@@ -425,10 +421,10 @@ class LapComparisonViewModel: ObservableObject {
             zSmooth.append(carPos.positions[i].coords.z)
         }
 
-        // Padding to nearest boundary values to ensure output is same size as input
-        xSmooth = [Float](repeating: xSmooth[0], count: 10) + xSmooth + [Float](repeating: xSmooth[xSmooth.count - 1], count: 10)
-        ySmooth = [Float](repeating: ySmooth[0], count: 10) + ySmooth + [Float](repeating: ySmooth[ySmooth.count - 1], count: 10)
-        zSmooth = [Float](repeating: zSmooth[0], count: 10) + zSmooth + [Float](repeating: zSmooth[zSmooth.count - 1], count: 10)
+        // Wrap style padding to ensure output is same size as input
+        xSmooth = Array(xSmooth[(xSmooth.count-9)...(xSmooth.count-1)]) + xSmooth + Array(xSmooth[0...10])
+        ySmooth = Array(ySmooth[(ySmooth.count-9)...(ySmooth.count-1)]) + ySmooth + Array(ySmooth[0...10])
+        zSmooth = Array(zSmooth[(zSmooth.count-9)...(zSmooth.count-1)]) + zSmooth + Array(zSmooth[0...10])
         
         // Savitsky Golay coefficients calculated using window length = 20, polyorder = 2
         let kernel: [Float] = [-0.05795455,-0.02386364,0.00643939,0.03295455,0.05568182,0.07462121,0.08977273,0.10113636,0.10871212,0.1125,0.1125,0.10871212,0.10113636,0.08977273,0.07462121,0.05568182,0.03295455,0.00643939,-0.02386364,-0.05795455]
@@ -436,7 +432,7 @@ class LapComparisonViewModel: ObservableObject {
         xSmooth = vDSP.convolve(xSmooth, withKernel: kernel)
         ySmooth = vDSP.convolve(ySmooth, withKernel: kernel)
         zSmooth = vDSP.convolve(zSmooth, withKernel: kernel)
-
+        
         for i in 0...(xSmooth.count - 1) {
             carPos.positions[i].coords.x = xSmooth[i]
             carPos.positions[i].coords.y = ySmooth[i]

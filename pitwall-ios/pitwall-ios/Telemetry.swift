@@ -27,23 +27,22 @@ func integrate(pt1: [Double], pt2: [Double]) -> Double {
     return triangleArea + rectangularArea
 }
 
-func addDistance(CarData: [String]) -> [[Double]] {
-    var returnArr = [[Double]]()
+func addDistance(CarData: [(value: String, timestamp: Double)]) -> [(speed: Double, distance: Double)] {
+    var returnArr = [(speed: Double, distance: Double)]()
     
-    for (i, data) in CarData.enumerated() {
-        let data = data.components(separatedBy: "::")
-        let timestamp = Double(data[1]) ?? 0
-        let speed = Double(data[0].components(separatedBy: ",")[1]) ?? 0
+    for (i, item) in CarData.enumerated() {
+        let timestamp = item.timestamp
+        let speed = Double(item.value.components(separatedBy: ",")[1]) ?? 0
         
         if i == 0 { // Distance travelled is 0 on first sample
-            returnArr.append([speed,0])
+            returnArr.append((speed: speed, distance: 0))
         } else {
-            let prev = CarData[i-1].components(separatedBy: "::")
-            let timestampPrev = Double(prev[1]) ?? 0
-            let speedPrev = Double(prev[0].components(separatedBy: ",")[1]) ?? 0
-            returnArr.append([speed, integrate(pt1: [timestampPrev, speedPrev], pt2: [timestamp, speed]) + (returnArr.last?[1] ?? 0)])
+            let prev = CarData[i-1]
+            let timestampPrev = prev.timestamp
+            let speedPrev = Double(prev.value.components(separatedBy: ",")[1]) ?? 0
+            let distance = integrate(pt1: [timestampPrev, speedPrev], pt2: [timestamp, speed]) + (returnArr.last?.distance ?? 0)
+            returnArr.append((speed: speed, distance: distance))
         }
     }
-    
     return returnArr
 }
