@@ -30,6 +30,7 @@
 		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
 		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
+		00784FE62A6B79730014C86C /* DriverInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00784FE52A6B79730014C86C /* DriverInfo.swift */; };
 		0094DDB62A296F1200E37522 /* SimulScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0094DDB52A296F1200E37522 /* SimulScene.swift */; };
 		009F22B52A516360001ECA65 /* LapSimulationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009F22B42A516360001ECA65 /* LapSimulationViewModel.swift */; };
 		00A2B8C32A2DCB6D00B3987C /* SceneKitAssets.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */; };
@@ -82,6 +83,7 @@
 		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
+		00784FE52A6B79730014C86C /* DriverInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverInfo.swift; sourceTree = "<group>"; };
 		0094DDB52A296F1200E37522 /* SimulScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulScene.swift; sourceTree = "<group>"; };
 		009F22B42A516360001ECA65 /* LapSimulationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LapSimulationViewModel.swift; sourceTree = "<group>"; };
 		00A2B8C22A2DCB6D00B3987C /* SceneKitAssets.scnassets */ = {isa = PBXFileReference; lastKnownFileType = wrapper.scnassets; path = SceneKitAssets.scnassets; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 				0022E7902A03EF170030BB29 /* DataProcessor.swift */,
 				000819682A05444100F729F2 /* DataStore.swift */,
 				00CC995E2A0CB3B900603682 /* DriverObject.swift */,
+				00784FE52A6B79730014C86C /* DriverInfo.swift */,
 				0047DCD32A1B360700E0C259 /* Extensions.swift */,
 				00406E1A2A1621AC0057C757 /* Telemetry.swift */,
 				000CFFAD2A0104A700AAF530 /* Assets.xcassets */,
@@ -343,6 +346,7 @@
 				00CC995F2A0CB3B900603682 /* DriverObject.swift in Sources */,
 				005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */,
 				003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */,
+				00784FE62A6B79730014C86C /* DriverInfo.swift in Sources */,
 				0019CB5B2A45877900B8460A /* SCNGeometry+Extensions.swift in Sources */,
 				00112E532A24CC8800D8BAF8 /* LapSimulationView.swift in Sources */,
 				0094DDB62A296F1200E37522 /* SimulScene.swift in Sources */,

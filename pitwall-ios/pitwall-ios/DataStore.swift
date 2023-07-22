@@ -11,6 +11,7 @@ class DataStore: ObservableObject {
     
     var driverDatabase: [String:Driver] = [:]
     var sessionDatabase: Session = Session()
+    let driverInfo: DriverInfo = DriverInfo()
     
     var sessionType: String
     var driverList: [String]

@@ -89,4 +89,3 @@ struct Session {
     var FastestSector2: Float = Float.greatestFiniteMagnitude
     var FastestSector3: Float = Float.greatestFiniteMagnitude
 }
-

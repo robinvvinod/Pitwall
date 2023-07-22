@@ -95,7 +95,7 @@ class DataProcessor: DataStore {
             }
             count += 1
             
-            if sleepTime > 0 {
+            if sleepTime > 0 { // This shouldn't be here... since kafka consumer gets info topic by topic, timestamps are not in order (~200ms off)
                 try await Task.sleep(until: .now + .seconds(sleepTime * 0.9), tolerance: .nanoseconds(1), clock: .continuous)
 
             }
