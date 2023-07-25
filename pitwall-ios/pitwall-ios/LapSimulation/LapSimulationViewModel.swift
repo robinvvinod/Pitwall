@@ -10,36 +10,37 @@ import SceneKit
 import Accelerate
 import SwiftUI
 
-class CameraPosition {
-    // Stores the x, y and z angles for the cameraPos
-    var coords = SCNVector3(x: -10, y: 10, z: 20)
-    let radius: Float = 20 // Radius of the sphere in which the camera moves around car
-}
-
-struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
-    var coords: SCNVector3 // Current coordinate of car
-    var timestamp: Double // No. of seconds since the start of the lap
-    
-    /*
-     No. of seconds the car took to get to this coordinate from the previous coordinate.
-     Defaults to 0 since the number of total positions changes during resampling.
-     Hence, delta between this and last coord can only be calculated once resampling is finished.
-    */
-    var duration: Double = 0
-    var interpolated: Bool = false // True if the coord was calculated via interpolation
-    
-    // Any position will be sorted in chronological order
-    static func <(lhs: SinglePosition, rhs: SinglePosition) -> Bool {
-        return lhs.timestamp < rhs.timestamp
-    }
-}
-
-class CarPositions { // Contains all the positions of a given car for a given lap
-    var positions: [SinglePosition] = []
-}
-
 class LapSimulationViewModel {
     
+    class CameraPosition {
+        // Stores the x, y and z angles for the cameraPos
+        var coords = SCNVector3(x: -10, y: 10, z: 20)
+        let radius: Float = 20 // Radius of the sphere in which the camera moves around car
+    }
+    
+    struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
+        var coords: SCNVector3 // Current coordinate of car
+        var timestamp: Double // No. of seconds since the start of the lap
+        
+        /*
+         No. of seconds the car took to get to this coordinate from the previous coordinate.
+         Defaults to 0 since the number of total positions changes during resampling.
+         Hence, delta between this and last coord can only be calculated once resampling is finished.
+        */
+        var duration: Double = 0
+        var interpolated: Bool = false // True if the coord was calculated via interpolation
+        
+        // Any position will be sorted in chronological order
+        static func <(lhs: SinglePosition, rhs: SinglePosition) -> Bool {
+            return lhs.timestamp < rhs.timestamp
+        }
+    }
+
+    class CarPositions { // Contains all the positions of a given car for a given lap
+        var positions: [SinglePosition] = []
+    }
+    
+    // Non-private attributes will be referred to by LapComparisonView when instantiating SimulScene
     var cameraPos = CameraPosition()
     var car1Seq = SCNAction()
     var car2Seq = SCNAction()
@@ -147,9 +148,17 @@ class LapSimulationViewModel {
         var point1: SinglePosition
         var point2: SinglePosition
         
-        let dist1 = distance(v: refPoint)
+        var dist1 = distance(v: refPoint)
         var dist2 = distance(v: chase.positions[0].coords)
         
+        if distance(v: lead.positions[1].coords) < dist1 {
+            /*
+             If cars are driving toward origin, dist2 > dist1 means that the chase cars start point is before the lead start point
+             dist1&2 is made -ve to ensure that the dist2 > dist1 check later will still mean that chase cars start point is after lead
+            */
+            dist1 = -dist1
+            dist2 = -dist2
+        }
         
         if dist2 > dist1 { // Chase cars start point is after lead start point
             point1 = chase.positions[0]
@@ -173,7 +182,11 @@ class LapSimulationViewModel {
          The line is assumed to be 2D (x,z axes) for simplicity of calculation
         */
         
-        // TODO: Handle case where gradient is undefined
+        // TODO: Better handling in case where gradient is undefined / 0
+        if ((point1.coords.x - point2.coords.x) == 0) || ((point1.coords.z - point2.coords.z) == 0) {
+            return
+        }
+        
         let gradient = (point1.coords.z - point2.coords.z) / (point1.coords.x - point2.coords.x)
         let yIntrcpt = point1.coords.z - (gradient * point1.coords.x)
         
@@ -231,6 +244,11 @@ class LapSimulationViewModel {
         let refPoint = carPos.positions[0].coords
         let point1 = carPos.positions[count].coords
         let point2 = carPos.positions[count-1].coords
+        
+        // TODO: Better handling in case where gradient is undefined / 0
+        if ((point1.z - point2.z) == 0) || ((point1.x - point2.x) == 0) {
+            return
+        }
         
         let gradient = (point1.z - point2.z) / (point1.x - point2.x)
         let yIntrcpt = point1.z - (gradient * point1.x)

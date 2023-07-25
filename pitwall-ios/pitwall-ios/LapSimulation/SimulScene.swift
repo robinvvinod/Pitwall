@@ -16,10 +16,10 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
     var car2Seq: SCNAction
     var startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)
     private var trackNode: SCNNode
-    private var cameraPos: CameraPosition
+    private var cameraPos: LapSimulationViewModel.CameraPosition
     private var cameraNode: SCNNode
     
-    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: CameraPosition, trackNode: SCNNode, startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)) {
+    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: LapSimulationViewModel.CameraPosition, trackNode: SCNNode, startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)) {
         self.car1Seq = car1Seq
         self.car2Seq = car2Seq
         self.cameraPos = cameraPos

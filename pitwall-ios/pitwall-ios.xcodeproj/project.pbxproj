@@ -29,6 +29,7 @@
 		003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */; };
 		00406E1B2A1621AC0057C757 /* Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* Telemetry.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
+		004F36EE2A6BC68200239CCA /* TrackDominanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004F36ED2A6BC68200239CCA /* TrackDominanceView.swift */; };
 		005998F12A1DB56200A20410 /* GapOrIntervalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005998F02A1DB56200A20410 /* GapOrIntervalView.swift */; };
 		00784FE62A6B79730014C86C /* DriverInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00784FE52A6B79730014C86C /* DriverInfo.swift */; };
 		0094DDB62A296F1200E37522 /* SimulScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0094DDB52A296F1200E37522 /* SimulScene.swift */; };
@@ -82,6 +83,7 @@
 		003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTraceView.swift; sourceTree = "<group>"; };
 		00406E1A2A1621AC0057C757 /* Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telemetry.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		004F36ED2A6BC68200239CCA /* TrackDominanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackDominanceView.swift; sourceTree = "<group>"; };
 		005998F02A1DB56200A20410 /* GapOrIntervalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalView.swift; sourceTree = "<group>"; };
 		00784FE52A6B79730014C86C /* DriverInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverInfo.swift; sourceTree = "<group>"; };
 		0094DDB52A296F1200E37522 /* SimulScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulScene.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
 				005998F02A1DB56200A20410 /* GapOrIntervalView.swift */,
 				003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */,
+				004F36ED2A6BC68200239CCA /* TrackDominanceView.swift */,
 				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
 				003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */,
 				003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */,
@@ -364,6 +367,7 @@
 				000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */,
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,
 				0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */,
+				004F36EE2A6BC68200239CCA /* TrackDominanceView.swift in Sources */,
 				0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */,
 				00E55DB72A5907570013D2E2 /* SimulSceneView.swift in Sources */,
 				009F22B52A516360001ECA65 /* LapSimulationViewModel.swift in Sources */,

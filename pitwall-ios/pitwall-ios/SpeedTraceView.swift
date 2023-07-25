@@ -8,26 +8,21 @@
 import SwiftUI
 import Charts
 
-struct SpeedTraceData: Hashable {
-    let id: String
-    let speeds: [Int]
-    let distances: [Double]
-}
 
 class SpeedTraceViewModel: ObservableObject {
-    var drivers: [String]?
-    var laps: [Int]?
-    var processor: DataProcessor?
+    
+    struct SpeedTraceData: Hashable {
+        let id: String
+        let speeds: [Int]
+        let distances: [Double]
+    }
+    
     var speedData = [SpeedTraceData]()
     var lastVal: Double = 0
-    
     @Published var upperBound: Double = 0
     @Published var lowerBound: Double = 0
     
     func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
-        self.processor = processor
-        self.drivers = drivers
-        self.laps = laps
         
         for i in 0...(drivers.count - 1) {
             let driver = drivers[i]
@@ -56,7 +51,7 @@ class SpeedTraceViewModel: ObservableObject {
             }
         }
         
-        upperBound = lastVal
+        upperBound = lastVal // TODO: Change this on main thread
     }
     
     func getSpeed(speedData: SpeedTraceData, distance: Double) -> Int {
