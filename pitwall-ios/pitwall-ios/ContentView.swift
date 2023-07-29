@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "pitwall_ios_245"
+    let consumerGroup = "pitwall_ios_252"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps"]
     
     @StateObject var processor = DataProcessor(sessionType: "QUALIFYING", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"])

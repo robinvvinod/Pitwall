@@ -78,26 +78,56 @@ class TrackDominanceViewModel {
                 return // TODO: Handle error
             }
         }
-        seperateFastest()
+        extractFastestSections(resolution: 50)
     }
     
-    private func seperateFastest() {
-        var series: Int = 0
-        for i in 0...(rawData[0].pos.count - 1) {
-            var speed = interpolateSpeed(data: rawData[0], timestamp: rawData[0].pos[i].timestamp)
-            var rNum = rawData[0].rNum
-            for j in 1...(rawData.count - 1) {
-                let t = findClosestTime(data: rawData[j], refPoint: rawData[0].pos[i])
-                let s = interpolateSpeed(data: rawData[j], timestamp: t)
-                if s > speed {
-                    speed = s
-                    rNum = rawData[j].rNum
+    var maxY = -Float.infinity
+    var minY = Float.infinity
+    var maxX = -Float.infinity
+    var minX = Float.infinity
+    
+    private func extractFastestSections(resolution: Float) {
+        func distance(p1: SpeedPosData.SinglePosition, p2: SpeedPosData.SinglePosition) -> Float { // Returns distance between p1 & p2
+            return sqrtf(powf((p1.x - p2.x), 2) - powf((p1.y - p2.y), 2))
+        }
+        
+        var series = 0
+        var start = 0
+        while start <= (rawData[0].pos.count - 1)  {
+            var speeds = [Int](repeating: 0, count: rawData.count)
+            var end = start
+            
+            for i in start...(rawData[0].pos.count - 1) {
+                maxX = rawData[0].pos[i].x > maxX ? rawData[0].pos[i].x : maxX
+                minX = rawData[0].pos[i].x < minX ? rawData[0].pos[i].x : minX
+                maxY = rawData[0].pos[i].y > maxY ? rawData[0].pos[i].y : maxY
+                minY = rawData[0].pos[i].y < minY ? rawData[0].pos[i].y : minY
+                
+                for j in 0...(rawData.count - 1) {
+                    if j == 0 {
+                        speeds[j] += interpolateSpeed(data: rawData[0], timestamp: rawData[0].pos[i].timestamp)
+                    } else {
+                        let t = findClosestTime(data: rawData[j], refPoint: rawData[0].pos[i])
+                        speeds[j] += interpolateSpeed(data: rawData[j], timestamp: t)
+                    }
+                }
+                
+                if distance(p1: rawData[0].pos[i], p2: rawData[0].pos[start]) >= resolution {
+                    end = i
+                    break
                 }
             }
-            if i % 5 == 0 {
+            
+            let maxS = speeds.max() ?? 0
+            let rNum = rawData[((speeds.firstIndex(of: maxS) ?? 0) % rawData.count)].rNum
+            
+            for k in start...end {
+                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, s: 0, rNum: rNum, series: series))
                 series += 1
+                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, s: 0, rNum: rNum, series: series))
             }
-            processedData.append((x: rawData[0].pos[i].x, y: rawData[0].pos[i].y, s: speed, rNum: rNum, series: series))
+            
+            start = end + 1
         }
     }
     
@@ -173,7 +203,6 @@ class TrackDominanceViewModel {
     }
     
     private func interpolateSpeed(data: SpeedPosData, timestamp: Double) -> Int {
-        
         let startIndex = max(0, min(data.speeds.count - 2, data.speeds.binarySearch(elem: SpeedPosData.SingleSpeed(s: 0, timestamp: timestamp))))
         var prev: SpeedPosData.SingleSpeed
         var next: SpeedPosData.SingleSpeed
@@ -212,6 +241,8 @@ struct TrackDominanceView: View {
                             .foregroundStyle(by: .value("rNum", viewModel.processedData[i].rNum))
                     }
                 }
+                .chartXScale(domain: viewModel.minX-20...viewModel.maxX+20)
+                .chartYScale(domain: viewModel.minY-20...viewModel.maxY+20)
             }
         }.onAppear {
             viewModel.load(processor: processor, drivers: ["1", "14"], laps: [30,30])
