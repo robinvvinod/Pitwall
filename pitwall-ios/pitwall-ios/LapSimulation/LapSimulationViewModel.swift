@@ -42,59 +42,46 @@ class LapSimulationViewModel {
     
     // Non-private attributes will be referred to by LapComparisonView when instantiating SimulScene
     var cameraPos = CameraPosition()
-    var car1Seq = SCNAction()
-    var car2Seq = SCNAction()
+    var carSeq = [SCNAction]()
     var trackNode = SCNNode()
-    var startPos = (p1: SCNVector3(), l1: SCNVector3(), p2: SCNVector3(), l2: SCNVector3())
-    private var car1Pos = CarPositions()
-    private var car2Pos = CarPositions()
+    var startPos = [(p: SCNVector3, l: SCNVector3)]()
     private var processor: DataProcessor?
+    private var laps = [Lap]()
+    private var carPos = [CarPositions]()
     
-    func load(processor: DataProcessor, selDriver: (car1: (driver: String, lap: Int), car2: (driver: String, lap: Int))) {
+    func load(processor: DataProcessor, selDriver: [(driver: String, lap: Int)]) {
         self.processor = processor
-        let lap1 = processor.driverDatabase[selDriver.car1.driver]?.laps[String(selDriver.car1.lap)] // Get lap object
-        let lap2 = processor.driverDatabase[selDriver.car2.driver]?.laps[String(selDriver.car2.lap)]
         
-        if let lap1, let lap2 {
-            if (lap1.PositionData.isEmpty) || (lap2.PositionData.isEmpty) {
-                return
-                // TODO: Throw error
-            }
-            
-            // Faster lap is set as car1 and is the reference from which start/end point is set & track is generated
-            if convertLapTimeToSeconds(time: lap1.LapTime.value) < convertLapTimeToSeconds(time: lap2.LapTime.value) {
-                loadLapData(lead: lap1, chase: lap2)
+        for item in selDriver {
+            let lap = processor.driverDatabase[item.driver]?.laps[String(item.lap)]
+            if let lap = lap {
+                if !lap.PositionData.isEmpty {
+                    laps.insertSorted(newItem: lap)
+                    carPos.append(CarPositions())
+                } else {
+                    return // TODO: Throw error
+                }
             } else {
-                loadLapData(lead: lap2, chase: lap1)
+                return // TODO: Throw error
             }
-            
-            car1Seq = generateActionSequence(carPos: car1Pos)
-            car2Seq = generateActionSequence(carPos: car2Pos)
-            
-            startPos = (p1: car1Pos.positions[0].coords, l1: car1Pos.positions[1].coords, p2: car2Pos.positions[0].coords, l2: car2Pos.positions[1].coords)
-            
-            trackNode = SCNPathNode(path: car1Pos.positions.map { $0.coords }, width: 12, curvePoints: 32)
-            car1Pos = CarPositions() // carPos is no longer needed, deallocating memory
-            car2Pos = CarPositions()
         }
-    }
-    
-    private func loadLapData(lead: Lap, chase: Lap) {
-        getRawPositions(lap: lead, carPos: car1Pos)
-        getRawPositions(lap: chase, carPos: car2Pos)
         
-        syncStartPoints()
-        syncEndPoint(lap: lead, carPos: car1Pos)
-        syncEndPoint(lap: chase, carPos: car2Pos)
-        
-        resampleToFrequency(carPos: car1Pos, frequency: 10)
-        resampleToFrequency(carPos: car2Pos, frequency: 10)
-        
-        savitskyGolayFilter(carPos: car1Pos)
-        savitskyGolayFilter(carPos: car2Pos)
-        
-        calculateDurations(carPos: car1Pos)
-        calculateDurations(carPos: car2Pos)
+        for i in 0...(laps.count - 1) {
+            getRawPositions(lap: laps[i], carPos: carPos[i])
+            resampleToFrequency(carPos: carPos[i], frequency: 10)
+            savitskyGolayFilter(carPos: carPos[i])
+            if i != 0 {
+                syncStartPoint(target: carPos[i])
+                setEndPoint(lap: laps[i], carPos: carPos[i])
+            }
+            calculateDurations(carPos: carPos[i])
+            carSeq.append(generateActionSequence(carPos: carPos[i]))
+            startPos.append((p: carPos[i].positions[0].coords, l: carPos[i].positions[1].coords))
+        }
+
+        trackNode = SCNPathNode(path: carPos[0].positions.map { $0.coords }, width: 12, curvePoints: 32)
+        carPos = [] // These objects are no longer needed. Deallocating memory
+        laps = []
     }
     
     private func getRawPositions(lap: Lap, carPos: CarPositions) {
@@ -126,7 +113,7 @@ class LapSimulationViewModel {
         carPos.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
     }
     
-    private func syncStartPoints() {
+    private func syncStartPoint(target: CarPositions) {
         /*
          Lap start time is calculated using the timestamp the car left the pits / timestamp of sector 3 time of previous lap
          Due to delays in the sensors detecting the above, lap start time is not always consistent between laps/cars
@@ -136,42 +123,26 @@ class LapSimulationViewModel {
          The chase cars start point is synced to the lead cars. The closest point to the lead cars start point in the path of the chase
          car is set as it's start point.
         */
-        let lead = car1Pos
-        let chase = car2Pos
+        let lead = carPos[0]
         
-        func distance(v: SCNVector3) -> Float { // Returns distance of point from origin
-            return sqrtf(powf(v.x, 2) + powf(v.z, 2))
+        func distance(p1: SCNVector3, p2: SCNVector3) -> Float { // Returns distance between points
+            return sqrtf(powf(p1.x - p2.x, 2) + powf(p1.z - p2.z, 2))
         }
         
         let refPoint = lead.positions[0].coords // Lead cars start point is used as the reference
         // Point 1 and 2 are the closest two points to the lead cars start point
-        var point1: SinglePosition
-        var point2: SinglePosition
+        var prev = distance(p1: target.positions[0].coords, p2: refPoint)
+        var count = 1
+        var dist = distance(p1: target.positions[count].coords, p2: refPoint)
         
-        var dist1 = distance(v: refPoint)
-        var dist2 = distance(v: chase.positions[0].coords)
-        
-        if distance(v: lead.positions[1].coords) < dist1 {
-            /*
-             If cars are driving toward origin, dist2 > dist1 means that the chase cars start point is before the lead start point
-             dist1&2 is made -ve to ensure that the dist2 > dist1 check later will still mean that chase cars start point is after lead
-            */
-            dist1 = -dist1
-            dist2 = -dist2
+        while dist < prev {
+            prev = dist
+            count += 1
+            dist = distance(p1: target.positions[count].coords, p2: refPoint)
         }
         
-        if dist2 > dist1 { // Chase cars start point is after lead start point
-            point1 = chase.positions[0]
-            point2 = chase.positions[1]
-        } else { // Chase cars start point is before lead start point
-            var count = 0
-            while dist2 < dist1 {
-                count += 1
-                dist2 = distance(v: chase.positions[count].coords)
-            }
-            point1 = chase.positions[count-1]
-            point2 = chase.positions[count]
-        }
+        let point1 = target.positions[count-1]
+        let point2 = target.positions[count]
         
         /*
          A line is drawn that contains point 1 and 2. The point on the line closest to the lead cars start point is calculated by finding
@@ -212,13 +183,36 @@ class LapSimulationViewModel {
         m = Float(numerator) / (point1.coords.x - point2.coords.x)
         c = Float(point1.timestamp) - (m * point1.coords.x)
         t = (m*x) + c // Time of new start point relative to old start point
-        
-        for i in 0...(chase.positions.count - 1) {
-            chase.positions[i].timestamp -= Double(t) // Offset all timestamps to be relative to new start point
+
+        var removeFirst = -1
+        for i in 0...(target.positions.count - 1) {
+            target.positions[i].timestamp -= Double(t) // Offset all timestamps to be relative to new start point
+            if target.positions[i].timestamp < 0 {
+                removeFirst = i
+            }
         }
         
-        let startPoint = SCNVector3(x: x, y: chase.positions[0].coords.y, z: z)
-        chase.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+        if removeFirst != -1 { // Remove positions that were before the new start point
+            target.positions.removeFirst(removeFirst+1)
+        }
+
+        let startPoint = SCNVector3(x: x, y: target.positions[0].coords.y, z: z)
+        target.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+    }
+    
+    private func setEndPoint(lap: Lap, carPos: CarPositions) {
+        let lapTime = Double(convertLapTimeToSeconds(time: laps[0].LapTime.value))
+        var count = carPos.positions.count - 1
+        var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+
+        while delta > lapTime {
+            carPos.positions.remove(at: count)
+            count -= 1
+            delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+        }
+        
+        let endPoint = linearInterpolate(prev: carPos.positions[carPos.positions.count - 2], next: carPos.positions[carPos.positions.count - 1], t: Float(lapTime))
+        carPos.positions.append(SinglePosition(coords: endPoint, timestamp: lapTime))
     }
     
     private func syncEndPoint(lap: Lap, carPos: CarPositions) {
@@ -312,7 +306,7 @@ class LapSimulationViewModel {
         fillMissing(carPos: carPos)
         
         // Preserve first and last data points. All other non-interpolated data is removed
-        for i in stride(from: carPos.positions.count - 2, to: 1, by: -1) {
+        for i in stride(from: carPos.positions.count - 2, to: 0, by: -1) {
             if carPos.positions[i].interpolated == false {
                 carPos.positions.remove(at: i)
             }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-class Lap {
+class Lap: Comparable {
     // Historical data
     
     // Tyre type is only broadcast by backend whenever there is a change. Hence, when a new lap is created, value from previous lap
@@ -38,6 +38,14 @@ class Lap {
     var PitOut: (value: Bool, timestamp: Double) = (false, 0)
     var Deleted: Bool = false
     var StartTime: Double = 0
+    
+    static func <(lhs: Lap, rhs: Lap) -> Bool {
+        return convertLapTimeToSeconds(time: lhs.LapTime.value) < convertLapTimeToSeconds(time: rhs.LapTime.value)
+    }
+    
+    static func ==(lhs: Lap, rhs: Lap) -> Bool {
+        return convertLapTimeToSeconds(time: lhs.LapTime.value) == convertLapTimeToSeconds(time: rhs.LapTime.value)
+    }
 }
 
 class Driver {

@@ -10,30 +10,22 @@ import SceneKit.ModelIO
 
 class SimulScene: SCNScene, SCNSceneRendererDelegate {
     
-    var car1: SCNNode
-    var car2: SCNNode
-    var car1Seq: SCNAction
-    var car2Seq: SCNAction
-    var startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)
+    var carNodes = [SCNNode]()
+    var carSeq: [SCNAction]
+    var startPos: [(p: SCNVector3, l: SCNVector3)]
     private var trackNode: SCNNode
     private var cameraPos: LapSimulationViewModel.CameraPosition
     private var cameraNode: SCNNode
     
-    init(car1Seq: SCNAction, car2Seq: SCNAction, cameraPos: LapSimulationViewModel.CameraPosition, trackNode: SCNNode, startPos: (p1: SCNVector3, l1: SCNVector3, p2: SCNVector3, l2: SCNVector3)) {
-        self.car1Seq = car1Seq
-        self.car2Seq = car2Seq
+    init(carSeq: [SCNAction], cameraPos: LapSimulationViewModel.CameraPosition, trackNode: SCNNode, startPos: [(p: SCNVector3, l: SCNVector3)]) {
+        self.carSeq = carSeq
         self.cameraPos = cameraPos
         self.trackNode = trackNode
         self.startPos = startPos
         self.cameraNode = SCNNode()
-        self.car1 = SCNNode()
-        self.car2 = SCNNode()
 
         super.init()
         
-        self.car1 = loadModel(color: UIColor.orange)
-        self.car2 = loadModel(color: UIColor.white)
-
         background.contents = MDLSkyCubeTexture(name: "sky",
                                           channelEncoding: .float16,
                                         textureDimensions: vector_int2(128, 128),
@@ -43,22 +35,22 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
                                              groundAlbedo: 0.5)
         lightingEnvironment.contents = background.contents
         
+        let colorMap = [UIColor.orange, UIColor.white, UIColor.black]
         rootNode.addChildNode(self.trackNode)
-        rootNode.addChildNode(self.car1)
-        rootNode.addChildNode(self.car2)
-        
-        self.car1.position = startPos.p1
-        self.car1.look(at: startPos.l1, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
-        self.car2.position = startPos.p2
-        self.car2.look(at: startPos.l2, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+        for i in 0...(self.carSeq.count - 1) {
+            self.carNodes.append(loadModel(color: colorMap[i]))
+            rootNode.addChildNode(self.carNodes[i])
+            self.carNodes[i].position = self.startPos[i].p
+            self.carNodes[i].look(at: self.startPos[i].l, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+        }
         
         self.cameraNode.camera = SCNCamera()
         self.cameraNode.position = SCNVector3(x: 0, y: 0, z: 3)
         self.cameraNode.camera?.zFar = 1000
-        let lookAt = SCNLookAtConstraint(target: car1)
+        let lookAt = SCNLookAtConstraint(target: self.carNodes[0])
         lookAt.isGimbalLockEnabled = true
         self.cameraNode.constraints = [lookAt]
-        self.car1.addChildNode(self.cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
+        self.carNodes[0].addChildNode(self.cameraNode) // Camera is added as a child node of car1, and will be positioned relative to car 1 always
     }
     
     private func loadModel(color: UIColor) -> SCNNode {
@@ -78,7 +70,7 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
         node.geometry?.firstMaterial?.emission.contents = color
         node.scale = SCNVector3(x: 1.08, y: 1, z: 1.18)
         node.opacity = 0.5
-        return node
+        return node.flattenedClone()
     }
     
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {

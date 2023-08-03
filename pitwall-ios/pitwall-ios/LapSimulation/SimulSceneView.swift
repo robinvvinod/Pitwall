@@ -40,16 +40,40 @@ struct SimulSceneView: UIViewRepresentable {
         }
         
         @objc func handleTap(_ gestureRecognize: UIGestureRecognizer) {
-            // Start movement of cars after user taps screen
-            if (scene.car1.position == scene.startPos.p1) && (scene.car2.position == scene.startPos.p2) {
-                scene.car1.runAction(scene.car1Seq, forKey: "car1Seq")
-                scene.car2.runAction(scene.car2Seq, forKey: "car2Seq")
+            var inMotion = false
+            for i in 0...(scene.carNodes.count - 1) {
+                if scene.carNodes[i].position != scene.startPos[i].p { // check if any cars are already in motion or at end point
+                    inMotion = true
+                }
             }
             
-            // Reset car back to start point after tap once action seq is complete
-            if (scene.car1.action(forKey: "car1Seq") == nil) && (scene.car2.action(forKey: "car2Seq") == nil) {
-                scene.car1.position = scene.startPos.p1
-                scene.car2.position = scene.startPos.p2
+            if !inMotion { // If cars are all at start point, start action seq
+                var actions = [SCNAction]()
+                for i in 0...(scene.carNodes.count - 1) {
+                    let action = SCNAction.customAction(duration: 0) { (node, elapsedTime) in
+                        self.scene.carNodes[i].runAction(self.scene.carSeq[i])
+                    }
+                    actions.append(action)
+                }
+                
+                scene.rootNode.runAction(SCNAction.group(actions), forKey: "groupAct")
+            } else { // Cars are in motion or at end point
+                // Reset car back to start point
+                if scene.rootNode.action(forKey: "groupAct") == nil {
+                    for i in 0...(scene.carNodes.count - 1) {
+                        scene.carNodes[i].position = scene.startPos[i].p
+                    }
+                }
+                
+                var actions = [SCNAction]()
+                for i in 0...(scene.carNodes.count - 1) {
+                    let action = SCNAction.customAction(duration: 0) { (node, elapsedTime) in
+                        self.scene.carNodes[i].runAction(self.scene.carSeq[i])
+                    }
+                    actions.append(action)
+                }
+                
+                scene.rootNode.runAction(SCNAction.group(actions), forKey: "groupAct")
             }
         }
     }
