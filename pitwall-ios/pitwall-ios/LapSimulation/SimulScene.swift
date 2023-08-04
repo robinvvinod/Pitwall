@@ -35,7 +35,7 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
                                              groundAlbedo: 0.5)
         lightingEnvironment.contents = background.contents
         
-        let colorMap = [UIColor.orange, UIColor.white, UIColor.black]
+        let colorMap = [UIColor.blue, UIColor.green, UIColor.orange, UIColor.purple, UIColor.red]
         rootNode.addChildNode(self.trackNode)
         for i in 0...(self.carSeq.count - 1) {
             self.carNodes.append(loadModel(color: colorMap[i]))

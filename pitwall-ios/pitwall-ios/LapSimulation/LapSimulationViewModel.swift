@@ -45,18 +45,19 @@ class LapSimulationViewModel {
     var carSeq = [SCNAction]()
     var trackNode = SCNNode()
     var startPos = [(p: SCNVector3, l: SCNVector3)]()
+    var driverList = [String]()
     private var processor: DataProcessor?
-    private var laps = [Lap]()
+    private var lapData = [Lap]()
     private var carPos = [CarPositions]()
     
-    func load(processor: DataProcessor, selDriver: [(driver: String, lap: Int)]) {
+    func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
         self.processor = processor
         
-        for item in selDriver {
-            let lap = processor.driverDatabase[item.driver]?.laps[String(item.lap)]
+        for i in 0...(drivers.count - 1) {
+            let lap = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]
             if let lap = lap {
                 if !lap.PositionData.isEmpty {
-                    laps.insertSorted(newItem: lap)
+                    lapData.insertSorted(newItem: lap)
                     carPos.append(CarPositions())
                 } else {
                     return // TODO: Throw error
@@ -64,15 +65,16 @@ class LapSimulationViewModel {
             } else {
                 return // TODO: Throw error
             }
+            driverList.append(drivers[i])
         }
         
         for i in 0...(laps.count - 1) {
-            getRawPositions(lap: laps[i], carPos: carPos[i])
+            getRawPositions(lap: lapData[i], carPos: carPos[i])
             resampleToFrequency(carPos: carPos[i], frequency: 10)
             savitskyGolayFilter(carPos: carPos[i])
             if i != 0 {
                 syncStartPoint(target: carPos[i])
-                setEndPoint(lap: laps[i], carPos: carPos[i])
+                setEndPoint(lap: lapData[i], carPos: carPos[i])
             }
             calculateDurations(carPos: carPos[i])
             carSeq.append(generateActionSequence(carPos: carPos[i]))
@@ -81,7 +83,7 @@ class LapSimulationViewModel {
 
         trackNode = SCNPathNode(path: carPos[0].positions.map { $0.coords }, width: 12, curvePoints: 32)
         carPos = [] // These objects are no longer needed. Deallocating memory
-        laps = []
+        lapData = []
     }
     
     private func getRawPositions(lap: Lap, carPos: CarPositions) {
@@ -201,7 +203,7 @@ class LapSimulationViewModel {
     }
     
     private func setEndPoint(lap: Lap, carPos: CarPositions) {
-        let lapTime = Double(convertLapTimeToSeconds(time: laps[0].LapTime.value))
+        let lapTime = Double(convertLapTimeToSeconds(time: lapData[0].LapTime.value))
         var count = carPos.positions.count - 1
         var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
 

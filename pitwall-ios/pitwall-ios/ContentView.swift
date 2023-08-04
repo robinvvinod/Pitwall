@@ -11,13 +11,14 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let consumerGroup = "pitwall_ios_298"
+    let consumerGroup = "pitwall_ios_306"
     let topics = ["TyreAge","LapTime","CurrentLap","Tyre","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps"]
     
     @StateObject var processor = DataProcessor(sessionType: "QUALIFYING", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"])
     @State var flag = false
     
     @State var lapSimulationViewModel = LapSimulationViewModel()
+    @State var speedTraceViewModel = SpeedTraceViewModel()
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -39,7 +40,8 @@ struct ContentView: View {
                 
                 if flag {
                     LapSimulationView(viewModel: lapSimulationViewModel)
-                        .frame(width: 500, height: 500)
+                        .frame(height: 500)
+//                    SpeedTraceView(viewModel: speedTraceViewModel)
                 }
                                                     
                 Button("Connect to kafka") {
@@ -76,7 +78,8 @@ struct ContentView: View {
                         kafka.listen = false
                         await processor.processQueue()
                         print("Processing done")
-                        await lapSimulationViewModel.load(processor: processor, selDriver: [(driver: "14", lap: 30), (driver: "1", lap: 30), (driver: "44", lap: 30)])
+                        await lapSimulationViewModel.load(processor: processor, drivers: ["1", "44", "14", "18", "77"], laps: [30,30,30,30,30])
+//                        await speedTraceViewModel.load(processor: processor, drivers: ["1", "44", "14", "18", "77"], laps: [30,30,30,30,30])
                         await MainActor.run(body: {
                             flag = true
                         })

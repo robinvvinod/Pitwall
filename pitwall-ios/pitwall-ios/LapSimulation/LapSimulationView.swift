@@ -10,10 +10,26 @@ import SceneKit
 
 struct LapSimulationView: View {
         
+    @EnvironmentObject var processor: DataProcessor
     let viewModel: LapSimulationViewModel
     
     var body: some View {
-        sceneView
+        VStack(alignment: .leading) {
+            sceneView
+            HStack {
+                let colorMap = [SwiftUI.Color.blue, SwiftUI.Color.green, SwiftUI.Color.orange, SwiftUI.Color.purple, SwiftUI.Color.red]
+                ForEach(0...(viewModel.driverList.count-1), id: \.self) { i in
+                    HStack {
+                        Circle()
+                            .fill(colorMap[i])
+                            .frame(width: 15, height: 15)
+                        Text("\(processor.driverInfo.lookup[viewModel.driverList[i]]?.sName ?? "")")
+                            .font(.caption)
+                    }
+                }
+            }
+        }
+        
     }
     
     @State private var prevX: Double = 0 // Stores last x coord in gesture to check direction of gesture when next x coord comes in
