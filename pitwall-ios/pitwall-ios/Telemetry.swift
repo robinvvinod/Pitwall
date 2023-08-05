@@ -8,9 +8,11 @@
 import Foundation
 
 func integrate(pt1: [Double], pt2: [Double]) -> Double {
-    // eq: [x,y]
-    // x coord of eq2 should be larger than x coord of eq1
-    
+    /*
+     Find area under speed-time graph, which is the distance travelled
+     eq: [x,y]
+     x coord of eq2 should be larger than x coord of eq1
+    */
     var triangleArea: Double = 0
     var rectangularArea: Double = 0
     let y1 = pt1[1] / 3.6   // Convert km/h to m/s
@@ -28,6 +30,7 @@ func integrate(pt1: [Double], pt2: [Double]) -> Double {
 }
 
 func addDistance(CarData: [(value: String, timestamp: Double)]) -> [(speed: Int, distance: Double)] {
+    // Converts (speed, timestamp) to (speed, distance)
     var returnArr = [(speed: Int, distance: Double)]()
     
     for (i, item) in CarData.enumerated() {

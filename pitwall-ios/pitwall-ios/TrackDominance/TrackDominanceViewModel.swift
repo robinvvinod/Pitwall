@@ -10,6 +10,7 @@ import Foundation
 class TrackDominanceViewModel {
     
     struct SpeedPosData: Comparable {
+        // SpeedPosData is used as a temporary container that stores both position data and speed data extracted from CarData
         struct SinglePosition: Comparable {
             let x: Float
             let y: Float
@@ -32,15 +33,15 @@ class TrackDominanceViewModel {
         let rNum: String
         let speeds: [SingleSpeed]
         let pos: [SinglePosition]
-        let lapTime: Float
+        let lapTime: Float // Allows for sorting by fastest lap time
         
         static func <(lhs: SpeedPosData, rhs: SpeedPosData) -> Bool {
             return lhs.lapTime < rhs.lapTime
         }
     }
     
-    private var rawData = [SpeedPosData]()
-    var processedData = [(x: Float, y: Float, s: Int, rNum: String, series: Int)]()
+    var processedData = [(x: Float, y: Float, rNum: String, series: Int)]() // Final data that is passed to TrackDominanceView
+    private var rawData = [SpeedPosData]() // Used to hold interim processing data
     
     func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
         for i in 0...(drivers.count - 1) {
@@ -61,14 +62,14 @@ class TrackDominanceViewModel {
                     let coords = posData[i].value.components(separatedBy: ",")
                     if coords[0] == "OnTrack" { // Kafka also broadcasts OffTrack coords which we can ignore
                         // All coords are divided by 10 since F1 provides data that is accurate to 1/10th of a meter.
-                        let x = (Float(coords[1]) ?? 0) / 10 // - sign is added as Scenekit directions are inverted compared to F1 data
-                        let y = (Float(coords[2]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
+                        let x = (Float(coords[1]) ?? 0) / 10
+                        let y = (Float(coords[2]) ?? 0) / 10
                         pos.append(SpeedPosData.SinglePosition(x: x, y: y, timestamp: posData[i].timestamp - startT))
                     }
                 }
                     
                 for i in 0...(carData.count - 1) {
-                    let speed = carData[i].value.components(separatedBy: ",")[1] // Safety check requried?
+                    let speed = carData[i].value.components(separatedBy: ",")[1]
                     speeds.append(SpeedPosData.SingleSpeed(s: Int(speed) ?? 0, timestamp: carData[i].timestamp - startT))
                 }
                 
@@ -78,14 +79,28 @@ class TrackDominanceViewModel {
             }
         }
         extractFastestSections(resolution: 50)
+        rawData = [] // rawData is no longer needed. Deallocating memory
     }
     
-    var maxY = -Float.infinity
+    var maxY = -Float.infinity // The min/max X & Y values are recorded to scale the track to the edges in Swift Charts
     var minY = Float.infinity
     var maxX = -Float.infinity
     var minX = Float.infinity
     
     private func extractFastestSections(resolution: Float) {
+        /*
+         The posData for the car with the fastest lap time is used as the reference for which the track is drawn. The function iterates
+         through each position of the lead car, and finds the speed of all other cars at a position that is closest to reference position.
+         
+         The closest position is found by first conducting a binary search of the timestamp at which the reference position was set. Since all
+         lap times are within the same order of magnitude, this gives a good start point for the search. We then search both directions in time
+         till we find the exact closest position. The timestamp of this position is used to interpolate the speed of the car.
+         
+         The resolution parameter controls the length of the track on which the speed of the cars is averaged. The track is split into
+         sections that are roughly equal to the resolution. Each section has it's own series, to ensure that they are treated as line segments
+         in Swift Charts, each with their own color to denote which car was fastest. The last point in series 1 is also the first point in
+         series 2. This ensures that all the line segments are joined to form a continous track.
+        */
         func distance(p1: SpeedPosData.SinglePosition, p2: SpeedPosData.SinglePosition) -> Float { // Returns distance between p1 & p2
             return sqrtf(powf((p1.x - p2.x), 2) - powf((p1.y - p2.y), 2))
         }
@@ -93,37 +108,54 @@ class TrackDominanceViewModel {
         var series = 0
         var start = 0
         while start <= (rawData[0].pos.count - 1)  {
+            /*
+             The speeds array contains the cumulative speed for a car over a section of the track. The index of a car's speed in the array
+             is the same as the index of the car's data in the rawData array.
+            */
             var speeds = [Int](repeating: 0, count: rawData.count)
             var end = start
             
+            /*
+             start to end is the index range which represents a section of track that is ~= resolution. For every point in this range,
+             the speeds of all cars is found using findClosestTime() and interpolateSpeed(). The
+            */
             for i in start...(rawData[0].pos.count - 1) {
-                maxX = rawData[0].pos[i].x > maxX ? rawData[0].pos[i].x : maxX
+                maxX = rawData[0].pos[i].x > maxX ? rawData[0].pos[i].x : maxX // Find minX/Y and maxX/Y values
                 minX = rawData[0].pos[i].x < minX ? rawData[0].pos[i].x : minX
                 maxY = rawData[0].pos[i].y > maxY ? rawData[0].pos[i].y : maxY
                 minY = rawData[0].pos[i].y < minY ? rawData[0].pos[i].y : minY
                 
                 for j in 0...(rawData.count - 1) {
-                    if j == 0 {
+                    if j == 0 { // No need to interpolate position for reference fastest car
                         speeds[j] += interpolateSpeed(data: rawData[0], timestamp: rawData[0].pos[i].timestamp)
                     } else {
-                        let t = findClosestTime(data: rawData[j], refPoint: rawData[0].pos[i])
+                        let t = findClosestTime(data: rawData[j], refPoint: rawData[0].pos[i]) // Find timestamp at which car was closest to ref position
                         speeds[j] += interpolateSpeed(data: rawData[j], timestamp: t)
                     }
                 }
                 
-                if distance(p1: rawData[0].pos[i], p2: rawData[0].pos[start]) >= resolution {
+                if distance(p1: rawData[0].pos[i], p2: rawData[0].pos[start]) >= resolution { // Split track into sections of resolution length
                     end = i
                     break
                 }
             }
             
+            /*
+             For a given section of the track, the car with the highest cumulative speed had the highest average speed. Since the index of
+             a car in the speeds array is the same as the index in the rawData array, the index of the max() element in the speeds array will
+             point us to the racing number of the car that had the highest average speed
+            */
             let maxS = speeds.max() ?? 0
             let rNum = rawData[((speeds.firstIndex(of: maxS) ?? 0) % rawData.count)].rNum
             
             for k in start...end {
-                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, s: 0, rNum: rNum, series: series))
+                /*
+                 Since the TrackDominanceView only shows which car was fastest at a given section and not the speed, the final
+                 processed data only contains x/y coords, the racing number of the fastest car and a series identifier
+                */
+                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, rNum: rNum, series: series))
                 series += 1
-                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, s: 0, rNum: rNum, series: series))
+                processedData.append((x: rawData[0].pos[k].x, y: rawData[0].pos[k].y, rNum: rNum, series: series))
             }
             
             start = end + 1
@@ -136,42 +168,43 @@ class TrackDominanceViewModel {
         }
         
         let startIndex = max(0, min(data.pos.count - 1, data.pos.binarySearch(elem: refPoint))) // Finds position with the closest timestamp to be used as start point of search
-        // Search forward & backward in time as car could be ahead/behind the reference car at any given point before lap end
         
-        var refDist = distance(p: data.pos[startIndex])
+        // Search forward & backward in time as car could be ahead/behind the reference car at any given point before lap end
+        var prevDist = distance(p: data.pos[startIndex])
         var curIndex = startIndex
         while curIndex > 0 { // Searching backward in time
             let curDist = distance(p: data.pos[curIndex])
-            if curDist <= refDist {
+            if curDist <= prevDist {
                 curIndex -= 1
-                refDist = curDist
+                prevDist = curDist
             } else {break}
         }
 
-        let backwardIndex = curIndex
+        let backwardIndex = curIndex // Index of closest position when searching backward in time
         
-        refDist = distance(p: data.pos[startIndex])
+        prevDist = distance(p: data.pos[startIndex])
         curIndex = startIndex
         while curIndex < (data.pos.count - 1) { // Searching forward in time
             let curDist = distance(p: data.pos[curIndex])
-            if curDist <= refDist {
+            if curDist <= prevDist {
                 curIndex += 1
-                refDist = curDist
+                prevDist = curDist
             } else {break}
-        }
+        } // curIndex is the index of the closest position when searching forward in time
         
         var point1: SpeedPosData.SinglePosition
         var point2: SpeedPosData.SinglePosition
-        if distance(p: data.pos[backwardIndex]) < distance(p: data.pos[curIndex]) {
-            if backwardIndex == 0 {
+        // Check if closest position was backward/forward in time
+        if distance(p: data.pos[backwardIndex]) < distance(p: data.pos[curIndex]) { // Closest position was backward in time
+            if backwardIndex == 0 { // Boundary checking
                 point1 = data.pos[backwardIndex]
                 point2 = data.pos[backwardIndex + 1]
             } else {
                 point1 = data.pos[backwardIndex - 1]
                 point2 = data.pos[backwardIndex]
             }
-        } else {
-            if curIndex == (data.pos.count - 1) {
+        } else { // Closest position was forward in time
+            if curIndex == (data.pos.count - 1) { // Boundary checking
                 point1 = data.pos[curIndex - 1]
                 point2 = data.pos[curIndex]
             } else {
@@ -179,6 +212,13 @@ class TrackDominanceViewModel {
                 point2 = data.pos[curIndex + 1]
             }
         }
+        
+        /*
+         Point 1 and 2 are the closest two data points in cars path to the refPoint. refPoint lies somewhere in the space between points 1 & 2.
+         Similar to syncStartPoint in LapSimulationViewModel, a line is drawn that contains point 1 and 2. The point on the line closest to the
+         refPoint is calculated by finding the normal to the line that passes through refPoint. The timestamp of this new point is later used
+         to calculate the speed of the car.
+        */
         
         // TODO: Better handling in case where gradient is undefined / 0
         if ((point1.y - point2.y) == 0) || ((point1.x - point2.x) == 0) {
