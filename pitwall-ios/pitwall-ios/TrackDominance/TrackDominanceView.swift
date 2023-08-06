@@ -28,7 +28,6 @@ struct TrackDominanceView: View {
             }
         }.onAppear {
             viewModel.load(processor: processor, drivers: ["1", "14"], laps: [30,30])
-            print(viewModel.processedData)
             loaded = true
         }
     }

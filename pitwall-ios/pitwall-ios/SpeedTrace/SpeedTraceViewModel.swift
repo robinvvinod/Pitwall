@@ -46,7 +46,8 @@ class SpeedTraceViewModel: ObservableObject {
                 speeds.append(distData[j].speed)
                 distances.append(distData[j].distance)
             }
-            speedData.insertSorted(newItem: SpeedTraceData(id: driver, speeds: speeds, distances: distances, lapTime: lapTime))
+            let rNum = (processor.driverInfo.lookup[driver]?.sName ?? "") + " L" + String(lap)
+            speedData.insertSorted(newItem: SpeedTraceData(id: rNum, speeds: speeds, distances: distances, lapTime: lapTime))
             
             if (distances.last ?? 1) > lastVal { // Setting furthest distance among all drivers
                 lastVal = distances.last ?? 1

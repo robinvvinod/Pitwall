@@ -23,7 +23,7 @@ struct LapSimulationView: View {
                         Circle()
                             .fill(colorMap[i])
                             .frame(width: 15, height: 15)
-                        Text("\(processor.driverInfo.lookup[viewModel.driverList[i]]?.sName ?? "")")
+                        Text("\(viewModel.driverList[i])")
                             .font(.caption)
                     }
                 }

@@ -22,10 +22,10 @@ struct SpeedTraceView: View {
         Chart {
             ForEach(0..<viewModel.speedData.count, id: \.self) { i in
                 let indvData = viewModel.speedData[i]
-                let drvName = processor.driverInfo.lookup[indvData.id]?.sName ?? ""
+//                let drvName = processor.driverInfo.lookup[indvData.id]?.sName ?? ""
                 ForEach(0..<indvData.speeds.count, id: \.self) { j in
                     LineMark(x: .value("Distance", indvData.distances[j]), y: .value("Speed", indvData.speeds[j]), series: .value("", i))
-                        .foregroundStyle(by: .value("Racing Number", drvName))
+                        .foregroundStyle(by: .value("rNum", indvData.id))
                 }
             }
             // If selectedIndex is not nil, show a rule mark at the corresponding x-val (distance) in chart

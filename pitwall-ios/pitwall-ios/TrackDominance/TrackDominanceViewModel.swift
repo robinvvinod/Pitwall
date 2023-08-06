@@ -72,8 +72,8 @@ class TrackDominanceViewModel {
                     let speed = carData[i].value.components(separatedBy: ",")[1]
                     speeds.append(SpeedPosData.SingleSpeed(s: Int(speed) ?? 0, timestamp: carData[i].timestamp - startT))
                 }
-                
-                rawData.insertSorted(newItem: SpeedPosData(rNum: drivers[i], speeds: speeds, pos: pos, lapTime: lapTime))
+                let rNum = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
+                rawData.insertSorted(newItem: SpeedPosData(rNum: rNum, speeds: speeds, pos: pos, lapTime: lapTime))
             } else {
                 return // TODO: Handle error
             }

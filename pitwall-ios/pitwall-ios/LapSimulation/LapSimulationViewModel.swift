@@ -65,7 +65,8 @@ class LapSimulationViewModel {
             } else {
                 return // TODO: Throw error
             }
-            driverList.append(drivers[i])
+            let drvInfo = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
+            driverList.append(drvInfo)
         }
         
         for i in 0...(laps.count - 1) {
