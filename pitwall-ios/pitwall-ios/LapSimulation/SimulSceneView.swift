@@ -44,6 +44,7 @@ struct SimulSceneView: UIViewRepresentable {
             for i in 0...(scene.carNodes.count - 1) {
                 if scene.carNodes[i].position != scene.startPos[i].p { // check if any cars are already in motion or at end point
                     inMotion = true
+                    break
                 }
             }
             
@@ -59,10 +60,9 @@ struct SimulSceneView: UIViewRepresentable {
                 scene.rootNode.runAction(SCNAction.group(actions), forKey: "groupAct")
             } else { // Cars are in motion or at end point
                 // Reset car back to start point
-                if scene.rootNode.action(forKey: "groupAct") == nil {
-                    for i in 0...(scene.carNodes.count - 1) {
-                        scene.carNodes[i].position = scene.startPos[i].p
-                    }
+                scene.rootNode.removeAllActions()
+                for i in 0...(scene.carNodes.count - 1) {
+                    scene.carNodes[i].position = scene.startPos[i].p
                 }
                 
                 var actions = [SCNAction]()

@@ -39,4 +39,16 @@ struct DriverInfo {
         "22": infoStruct(rNum: 22, fName: "Yuki Tsunoda", sName: "TSU", tShort: "ALP", tLong: "Alpha Tauri"),
         "3": infoStruct(rNum: 3, fName: "Daniel Ricciardo", sName: "RIC", tShort: "ALP", tLong: "Alpha Tauri")
         ]
+    
+    func getDriverNums() -> [String] {
+        return Array(lookup.keys)
+    }
+    
+    func getDriverSName() -> [String] {
+        var names = [String]()
+        for driver in lookup {
+            names.append(driver.value.sName)
+        }
+        return names
+    }
 }

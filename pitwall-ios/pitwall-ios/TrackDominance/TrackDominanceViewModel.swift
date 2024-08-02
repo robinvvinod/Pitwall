@@ -43,7 +43,13 @@ class TrackDominanceViewModel {
     var processedData = [(x: Float, y: Float, rNum: String, series: Int)]() // Final data that is passed to TrackDominanceView
     private var rawData = [SpeedPosData]() // Used to hold interim processing data
     
-    func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
+    private var processor: DataProcessor
+    
+    init(processor: DataProcessor) {
+        self.processor = processor
+    }
+    
+    func load(drivers: [String], laps: [Int]) {
         for i in 0...(drivers.count - 1) {
             let posData = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]?.PositionData
             let carData = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]?.CarData
@@ -242,10 +248,10 @@ class TrackDominanceViewModel {
     }
     
     private func interpolateSpeed(data: SpeedPosData, timestamp: Double) -> Int {
-        let startIndex = max(0, min(data.speeds.count - 2, data.speeds.binarySearch(elem: SpeedPosData.SingleSpeed(s: 0, timestamp: timestamp))))
+        let startIndex = max(1, min(data.speeds.count - 2, data.speeds.binarySearch(elem: SpeedPosData.SingleSpeed(s: 0, timestamp: timestamp))))
         var prev: SpeedPosData.SingleSpeed
         var next: SpeedPosData.SingleSpeed
-        
+                
         if data.speeds[startIndex].timestamp < timestamp {
             prev = data.speeds[startIndex]
             next = data.speeds[startIndex+1]

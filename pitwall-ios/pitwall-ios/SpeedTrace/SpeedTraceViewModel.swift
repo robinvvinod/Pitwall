@@ -25,7 +25,13 @@ class SpeedTraceViewModel: ObservableObject {
     @Published var upperBound: Double = 0 // Used to control bounds of sliding window of chart when zooming/panning
     @Published var lowerBound: Double = 0
     
-    func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
+    private var processor: DataProcessor
+    
+    init(processor: DataProcessor) {
+        self.processor = processor
+    }
+    
+    func load(drivers: [String], laps: [Int]) {
         // Populates speedData array which is passed to SpeedTraceView to display chart
         for i in 0...(drivers.count - 1) {
             let driver = drivers[i]
@@ -64,7 +70,7 @@ class SpeedTraceViewModel: ObservableObject {
          Returns interpolated speed data for any given distance. Used to determine speed when panning through chart since
          not all distances may have a corresponding speed data point.
          
-         Finds the index of the closest existing distance using binary search, then does a linear interpolation using the prev/next
+         Finds the index of the closest existing distance using a linear search, then does a linear interpolation using the prev/next
          value to calculate speed at any given distance.
         */
         let index = speedData.distances.binarySearch(elem: distance)

@@ -59,9 +59,17 @@ extension Array where Element: Comparable {
                 return mid
             }
         }
-        return lo
+        // Exact element not found. Return closest item
+        if lo > (self.count - 1) {
+            return self.count - 1
+        } else if hi < 0 {
+            return 0
+        } else {
+            return lo
+        }
     }
 }
+
 
 // If key does not exist in dict, create it and set it to a default value
 extension Dictionary {

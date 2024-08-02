@@ -14,8 +14,8 @@ class LapSimulationViewModel {
     
     class CameraPosition {
         // Stores the x, y and z angles for the cameraPos
-        var coords = SCNVector3(x: -10, y: 10, z: 20)
-        let radius: Float = 20 // Radius of the sphere in which the camera moves around car
+        var coords = SCNVector3(x: -10, y: 10, z: 16)
+        let radius: Float = 16 // Radius of the sphere in which the camera moves around car
     }
     
     struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
@@ -46,13 +46,16 @@ class LapSimulationViewModel {
     var trackNode = SCNNode()
     var startPos = [(p: SCNVector3, l: SCNVector3)]()
     var driverList = [String]()
-    private var processor: DataProcessor?
     private var lapData = [Lap]()
     private var carPos = [CarPositions]()
     
-    func load(processor: DataProcessor, drivers: [String], laps: [Int]) {
+    private var processor: DataProcessor
+    
+    init(processor: DataProcessor) {
         self.processor = processor
-        
+    }
+    
+    func load(drivers: [String], laps: [Int]) {
         for i in 0...(drivers.count - 1) {
             let lap = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]
             if let lap = lap {
@@ -402,6 +405,9 @@ class LapSimulationViewModel {
         ySmooth = [Float](repeating: ySmooth[0], count: 10) + ySmooth
         zSmooth = [Float](repeating: zSmooth[0], count: 10) + zSmooth
         
+        // TODO: Use center weighted convolution coefficients to give greater priority to actual value
+        // E.g) [0.1, 0.2, 0.4, 0.2, 0.1]
+        // Compare to savitsky golay filter
         xSmooth = vDSP.convolve(xSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         ySmooth = vDSP.convolve(ySmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
