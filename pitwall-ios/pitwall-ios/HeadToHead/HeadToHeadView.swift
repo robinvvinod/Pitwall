@@ -24,11 +24,38 @@ struct HeadToHeadView: View {
     @ViewBuilder
     var comparisonView: some View {
         if let viewModels = viewModels {
-            VStack {
-                SpeedTraceView(processor: _processor, viewModel: viewModels.0)
-                TrackDominanceView(viewModel: viewModels.1)
-                LapSimulationView(processor: _processor, viewModel: viewModels.2)
-            }.frame(height: 800)
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.white)
+                    .shadow(radius: 10)
+                
+                VStack(alignment: .leading) {
+                    Text("Speed Trace")
+                        .padding(.leading)
+                        .padding(.top)
+                        .fontWeight(.heavy)
+                        .font(.body)
+                    SpeedTraceView(processor: _processor, viewModel: viewModels.0)
+                        .padding()
+                        .frame(height: 350)
+                    Text("Track Dominance")
+                        .padding(.leading)
+                        .fontWeight(.heavy)
+                        .font(.body)
+                    TrackDominanceView(viewModel: viewModels.1)
+                        .padding()
+                        .frame(height: 250)
+                    Text("Lap Simulation")
+                        .padding(.leading)
+                        .fontWeight(.heavy)
+                        .font(.body)
+                    LapSimulationView(processor: _processor, viewModel: viewModels.2)
+                        .padding()
+                        .frame(height: 350)
+                }
+            }
+            .frame(maxHeight: .infinity)
+            .padding()
         }
     }
     
@@ -72,12 +99,14 @@ struct HeadToHeadView: View {
                     .pickerStyle(.inline)
                     
                     Picker("Select a lap", selection: $selectedLap) {
-                        // Sort as int instead of string
+                        // TODO: Sort as int instead of string
                         ForEach(Array(processor.driverDatabase[selectedDriver]?.laps.keys ?? ["1": Lap(TyreType: ("", 0))].keys).sorted(), id: \.self) { key in
                             Text(key)
                                 .foregroundStyle(.black)
                         }
                     }.pickerStyle(.inline)
+                }.onAppear {
+                    selectedDriver = processor.driverList.first ?? "1"
                 }
                 
                 HStack {
@@ -145,7 +174,7 @@ struct HeadToHeadView: View {
             }
             
         }
-        .frame(height: 1000)
+        .frame(maxHeight: .infinity)
         .padding()
     }
 }

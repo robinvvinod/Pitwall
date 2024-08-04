@@ -15,6 +15,7 @@ struct pitwall_iosApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+//                .preferredColorScheme(.light)
         }
     }
 }

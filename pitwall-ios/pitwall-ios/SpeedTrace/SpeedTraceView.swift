@@ -26,6 +26,9 @@ struct SpeedTraceView: View {
                 ForEach(0..<indvData.speeds.count, id: \.self) { j in
                     LineMark(x: .value("Distance", indvData.distances[j]), y: .value("Speed", indvData.speeds[j]), series: .value("", i))
                         .foregroundStyle(by: .value("rNum", indvData.id))
+                        .mask {
+                            RectangleMark() // To make sure that values outside domain is not shown when chart is zoomed in
+                        }
                 }
             }
             // If selectedIndex is not nil, show a rule mark at the corresponding x-val (distance) in chart
@@ -34,7 +37,8 @@ struct SpeedTraceView: View {
                     .foregroundStyle(Color.gray.opacity(0.8))
             }
         }
-        .chartXAxisLabel("Distance")
+        .preferredColorScheme(.light)
+        .chartXAxisLabel("Distance (m)")
         .chartYAxisLabel("Speed (km/h)")
         .chartXScale(domain: viewModel.lowerBound...viewModel.upperBound) // View is refreshed when these values change
         .chartOverlay { chart in
@@ -77,7 +81,7 @@ struct SpeedTraceView: View {
                             ForEach(0..<viewModel.speedData.count, id: \.self) { i in
                                 // Interpolate speed at selected distance
                                 let point = viewModel.getSpeed(speedData: viewModel.speedData[i], distance: selectedIndex)
-                                let name = processor.driverInfo.lookup[viewModel.speedData[i].id]?.sName ?? ""
+                                let name = viewModel.speedData[i].id.prefix(3)
                                 Text("\(name): \(point)km/h")
                                     .padding(.vertical, 2)
                                     .font(.caption)

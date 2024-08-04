@@ -21,6 +21,8 @@ struct TrackDominanceView: View {
             }
             .chartXScale(domain: viewModel.minX-20...viewModel.maxX+20)
             .chartYScale(domain: viewModel.minY-20...viewModel.maxY+20)
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
         }
     }
 }

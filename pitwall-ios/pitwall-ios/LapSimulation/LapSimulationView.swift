@@ -16,16 +16,19 @@ struct LapSimulationView: View {
     var body: some View {
         VStack(alignment: .leading) {
             sceneView
+                .cornerRadius(10)
             HStack {
                 let colorMap = [SwiftUI.Color.blue, SwiftUI.Color.green, SwiftUI.Color.orange, SwiftUI.Color.purple, SwiftUI.Color.red]
                 ForEach(0...(viewModel.driverList.count-1), id: \.self) { i in
                     HStack {
                         Circle()
                             .fill(colorMap[i])
-                            .frame(width: 15, height: 15)
+                            .frame(width: 10, height: 10)
                         Text("\(viewModel.driverList[i])")
+                            
                             .font(.caption)
-                    }
+                            .foregroundStyle(Color(UIColor.lightGray))
+                    }.padding(.top, 3)
                 }
             }
         }
