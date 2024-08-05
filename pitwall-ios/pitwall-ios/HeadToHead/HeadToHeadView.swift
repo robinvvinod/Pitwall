@@ -30,6 +30,15 @@ struct HeadToHeadView: View {
                     .shadow(radius: 10)
                 
                 VStack(alignment: .leading) {
+                    Text("Head To Head")
+                        .font(.title)
+                        .foregroundStyle(.black)
+                        .fontWeight(.heavy)
+                        .padding(.leading)
+                        .padding(.top)
+                    
+                    lapInfoView
+                    
                     Text("Speed Trace")
                         .padding(.leading)
                         .padding(.top)
@@ -58,6 +67,89 @@ struct HeadToHeadView: View {
             .padding()
         }
     }
+    
+    var lapInfoView: some View {
+        HStack {
+            VStack(spacing: 0) {
+                // Set column heading
+                Text("Driver")
+                    .padding(.trailing, 8)
+                    .padding(.vertical, 8)
+                    .font(.headline)
+                ForEach(0..<selections.count, id: \.self) { j in
+                    let drvInfo = (processor.driverInfo.lookup[selections[j].name]?.sName ?? "") + " L" + "\(selections[j].lap)"
+                    Text(drvInfo)
+                        .padding(.trailing, 8)
+                        .padding(.vertical, 8)
+                }
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                lapInfoSubView
+            }
+        }.padding(.horizontal)
+    }
+    
+    var lapInfoSubView: some View {
+        HStack(spacing: 0) {
+            let headers = ["Lap Time", "Tyre", "Sector 1", "Sector 2", "Sector 3"]
+            ForEach(0..<headers.count, id: \.self) { i in
+                VStack(spacing: 0) {
+                    Text("\(headers[i])")
+                        .padding(8)
+                        .font(.headline)
+                        .foregroundColor(Color.black)
+                    
+                    ForEach(0..<selections.count, id: \.self) { j in
+                        let driverObject = processor.driverDatabase[selections[j].name]?.laps[String(selections[j].lap)]
+                        if let driverObject = driverObject {
+                            HStack(spacing: 0) {
+                                switch headers[i] {
+                                case "Lap Time":
+                                    Text(driverObject.LapTime.value)
+                                        .padding(8)
+                                    
+                                case "Tyre":
+                                    Text(driverObject.TyreType.value +  " " + String(driverObject.TyreAge.value))
+                                        .padding(8)
+                                    
+                                case "Sector 1":
+                                    let sector = convertLapTimeToSeconds(time: driverObject.Sector1Time.value)
+                                    Text("\(driverObject.Sector1Time.value)")
+                                        .foregroundColor(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector1) ? Color.white : Color.black)
+                                        .padding(.vertical, 2)
+                                        .padding(.horizontal, 8)
+                                        .background(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector1) ? Color.purple : nil)
+                                        .cornerRadius(15)
+                                        .padding(.vertical, 6)
+                                case "Sector 2":
+                                    let sector = convertLapTimeToSeconds(time: driverObject.Sector2Time.value)
+                                    Text("\(driverObject.Sector2Time.value)")
+                                        .foregroundColor(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector1) ? Color.white : Color.black)
+                                        .padding(.vertical, 2)
+                                        .padding(.horizontal, 8)
+                                        .background(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector2) ? Color.purple : nil)
+                                        .cornerRadius(15)
+                                        .padding(.vertical, 6)
+                                case "Sector 3":
+                                    let sector = convertLapTimeToSeconds(time: driverObject.Sector3Time.value)
+                                    Text("\(driverObject.Sector3Time.value)")
+                                        .foregroundColor(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector1) ? Color.white : Color.black)
+                                        .padding(.vertical, 2)
+                                        .padding(.horizontal, 8)
+                                        .background(sector.isNearlyEqual(to: processor.sessionDatabase.FastestSector3) ? Color.purple : nil)
+                                        .cornerRadius(15)
+                                        .padding(.vertical, 6)
+                                default:
+                                    Text("")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     
     @State private var selectedDriver: String = ""
     @State private var selectedLap: String = ""

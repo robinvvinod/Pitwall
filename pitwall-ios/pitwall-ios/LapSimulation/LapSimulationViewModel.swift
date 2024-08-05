@@ -62,17 +62,17 @@ class LapSimulationViewModel {
                 if !lap.PositionData.isEmpty {
                     lapData.insertSorted(newItem: lap)
                     carPos.append(CarPositions())
+                    let drvInfo = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
+                    driverList.insert(drvInfo, at: lapData.firstIndex(of: lap) ?? 0)
                 } else {
                     return // TODO: Throw error
                 }
             } else {
                 return // TODO: Throw error
             }
-            let drvInfo = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
-            driverList.append(drvInfo)
         }
         
-        for i in 0...(laps.count - 1) {
+        for i in 0...(lapData.count - 1) {
             getRawPositions(lap: lapData[i], carPos: carPos[i])
             resampleToFrequency(carPos: carPos[i], frequency: 10)
             savitskyGolayFilter(carPos: carPos[i])

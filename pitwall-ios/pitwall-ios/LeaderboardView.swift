@@ -48,7 +48,6 @@ struct LeaderboardView: View {
                     Text(processor.driverList[j])
                         .foregroundColor(Color.white)
                         .padding(8)
-                        .foregroundColor(Color.white)
                     
                     // TODO: Add driver name and team colour in addition to racing numbers
                 }

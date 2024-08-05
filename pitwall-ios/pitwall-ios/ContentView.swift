@@ -38,8 +38,8 @@ struct ContentView: View {
                 
                 
                 if flag {
-                    var lapSimulationViewModel = LapSimulationViewModel(processor: processor)
-                    var speedTraceViewModel = SpeedTraceViewModel(processor: processor)
+//                    var lapSimulationViewModel = LapSimulationViewModel(processor: processor)
+//                    var speedTraceViewModel = SpeedTraceViewModel(processor: processor)
                     
                     HeadToHeadView(viewModel: HeadToHeadViewModel(processor: processor))
 //                    LapSimulationView(viewModel: lapSimulationViewModel)
@@ -50,7 +50,7 @@ struct ContentView: View {
                 Button("Connect to kafka") {
                     
                     let kafka = KafkaConsumer(DataProcessor: processor)
-                    let consumerGroup = "pitwall_ios_" + String(Int.random(in: 100...10000))
+                    let consumerGroup = "pitwall_ios_" + UUID().uuidString
 
                     Task.detached(priority: .userInitiated) { // Starts processor consumer
                         do {
