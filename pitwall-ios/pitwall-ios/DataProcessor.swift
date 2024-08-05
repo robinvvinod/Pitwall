@@ -24,9 +24,9 @@ class DataProcessor: DataStore {
     let sessionSpecific = ["LapCount", "SessionStatus", "TotalLaps", "RCM"]
     
     var dataQueue: [SingleRecord] = []
-    var dispatchQueue = DispatchQueue(label: "addRecordQueue", qos: .userInitiated)
+    let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
         
-    func addtoQueue(records: [[String:AnyObject]]) throws {
+    func addtoQueue(records: [[String:AnyObject]]) {
         for record in records {
             let topic = record["topic"] as? String
             let key = (record["key"] as? String)?.base64Decoded()
@@ -34,11 +34,18 @@ class DataProcessor: DataStore {
             
             if let topic = topic, let key = key, let value = value {
                 guard let timestamp = Double(value.components(separatedBy: "::").last ?? "0") else {return}
-//                dispatchQueue.async {
-//                    self.dataQueue.insertSorted(newItem: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
-//                }
-                dataQueue.append(SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
+                process(record: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
             } else {return}
+        }
+    }
+    
+    func process(record: SingleRecord) {
+        if carSpecific.contains(record.topic) {
+            addCarSpecificData(topic: record.topic, driver: record.key, value: record.value)
+        } else if sessionSpecific.contains(record.topic) {
+            addSessionSpecificData(topic: record.topic, key: record.key, value: record.value)
+        } else {
+            addLapSpecificData(topic: record.topic, driver: record.key, value: record.value)
         }
     }
     

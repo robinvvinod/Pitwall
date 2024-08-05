@@ -79,7 +79,7 @@ struct ContentView: View {
                          */
                         try await Task.sleep(for: .seconds(30))
                         kafka.listen = false
-                        await processor.processQueue()
+//                        await processor.processQueue()
                         print("Processing done")
 //                        await lapSimulationViewModel.load(processor: processor, drivers: ["1", "44", "14", "18", "77"], laps: [30,30,30,30,30])
 //                        await speedTraceViewModel.load(processor: processor, drivers: ["1", "44", "14", "18", "77"], laps: [30,30,30,30,30])

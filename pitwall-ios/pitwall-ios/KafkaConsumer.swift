@@ -18,6 +18,7 @@ class KafkaConsumer {
     }
     
     var listen: Bool = true
+    let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
     
     enum consumerError: Error {
         case alreadyExists
@@ -114,7 +115,9 @@ class KafkaConsumer {
                 }
 
                 for try await records in group {
-                    try processor.addtoQueue(records: records)
+                    dispatchQueue.async {
+                        self.processor.addtoQueue(records: records)
+                    }
                 }
             }
         }
