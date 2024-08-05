@@ -36,7 +36,6 @@ struct ContentView: View {
                 
 //                LapHistoryView(driver: "14", headersArray: ["Lap Time", "Gap", "Tyre", "Sector 1", "Sector 2", "Sector 3", "ST1", "ST2", "ST3"])
                 
-                
                 if flag {
 //                    var lapSimulationViewModel = LapSimulationViewModel(processor: processor)
 //                    var speedTraceViewModel = SpeedTraceViewModel(processor: processor)

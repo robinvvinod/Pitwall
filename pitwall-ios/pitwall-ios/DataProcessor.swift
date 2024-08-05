@@ -24,8 +24,9 @@ class DataProcessor: DataStore {
     let sessionSpecific = ["LapCount", "SessionStatus", "TotalLaps", "RCM"]
     
     var dataQueue: [SingleRecord] = []
+    var dispatchQueue = DispatchQueue(label: "addRecordQueue", qos: .userInitiated)
         
-    func addtoQueue(records: [[String:AnyObject]]) async throws -> () {
+    func addtoQueue(records: [[String:AnyObject]]) throws {
         for record in records {
             let topic = record["topic"] as? String
             let key = (record["key"] as? String)?.base64Decoded()
@@ -33,13 +34,15 @@ class DataProcessor: DataStore {
             
             if let topic = topic, let key = key, let value = value {
                 guard let timestamp = Double(value.components(separatedBy: "::").last ?? "0") else {return}
-                //dataQueue.insertSorted(newItem: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
+//                dispatchQueue.async {
+//                    self.dataQueue.insertSorted(newItem: SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
+//                }
                 dataQueue.append(SingleRecord(topic: topic, key: key, value: value, timestamp: timestamp))
             } else {return}
         }
     }
     
-    func processQueueWithDelay(startPoint: Int) async throws -> () {
+    func processQueueWithDelay(startPoint: Int) async throws {
         var count = startPoint
         if dataQueue.isEmpty {
             return
@@ -103,7 +106,7 @@ class DataProcessor: DataStore {
         }
     }
     
-    func processQueue(start: Int = 0) async -> () {
+    func processQueue(start: Int = 0) {
         dataQueue.sort{ $0 < $1 }
         var count = start
         while true {

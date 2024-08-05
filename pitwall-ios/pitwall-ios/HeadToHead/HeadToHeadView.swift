@@ -181,7 +181,6 @@ struct HeadToHeadView: View {
                     .font(.caption)
                 
                 HStack {
-                    
                     Picker("Select a driver", selection: $selectedDriver) {
                         ForEach(processor.driverList, id: \.self) { num in
                             Text(processor.driverInfo.lookup[num]?.sName ?? "")
@@ -189,6 +188,7 @@ struct HeadToHeadView: View {
                         }
                     }
                     .pickerStyle(.inline)
+                    .frame(height: 100)
                     
                     Picker("Select a lap", selection: $selectedLap) {
                         // TODO: Sort as int instead of string
@@ -196,7 +196,9 @@ struct HeadToHeadView: View {
                             Text(key)
                                 .foregroundStyle(.black)
                         }
-                    }.pickerStyle(.inline)
+                    }
+                    .pickerStyle(.inline)
+                    .frame(height: 100)
                 }.onAppear {
                     selectedDriver = processor.driverList.first ?? "1"
                 }
@@ -215,56 +217,60 @@ struct HeadToHeadView: View {
                         } else {
                             // TODO: Prompt user to avoid repitition
                         }
-                    }.padding()
-                        .foregroundStyle(.white)
-                        .background(Color(red: 0, green: 0, blue: 0.5))
-                        .clipShape(Capsule())
+                    }
+                    .padding()
+                    .foregroundStyle(.white)
+                    .background(Color(red: 0, green: 0, blue: 0.5))
+                    .clipShape(Capsule())
                     Spacer()
-                }
+                }.padding()
                 
-                HStack {
-                    Spacer()
-                    Button("Compare") {
-                        
-                        if selections.count < 2 {
-                            // TODO: Prompt user to avoid
-                            return
-                        }
-                        
-                        Task.detached(priority: .userInitiated) {
-                            var drivers = [String]()
-                            var laps = [Int]()
+                if !selections.isEmpty {
+                    Text("Selected Laps")
+                        .padding()
+                        .font(.body)
+                        .fontWeight(.heavy)
+                    List($selections, id: \.self, editActions: .delete) { $selection in
+                        let sel = (processor.driverInfo.lookup[selection.name]?.sName ?? "") + " L" + "\(selection.lap)"
+                        Text(sel)
+                    }
+                    .padding(.horizontal)
+                    .cornerRadius(10)
+                    .frame(height: 150)
+                    
+                    HStack {
+                        Spacer()
+                        Button("Compare") {
                             
-                            for sel in await self.selections {
-                                drivers.append(sel.name)
-                                laps.append(sel.lap)
+                            if selections.count < 2 {
+                                // TODO: Prompt user to avoid
+                                return
                             }
                             
-                            let viewModelsInternal = viewModel.load(drivers: drivers, laps: laps)
-                            
-                            await MainActor.run(body: {
-                                viewModels = viewModelsInternal
-                            })
+                            Task.detached(priority: .userInitiated) {
+                                var drivers = [String]()
+                                var laps = [Int]()
+                                
+                                for sel in await self.selections {
+                                    drivers.append(sel.name)
+                                    laps.append(sel.lap)
+                                }
+                                
+                                let viewModelsInternal = viewModel.load(drivers: drivers, laps: laps)
+                                
+                                await MainActor.run(body: {
+                                    viewModels = viewModelsInternal
+                                })
+                            }
                         }
-                        
-                        
-                    }.padding()
+                        .padding()
                         .foregroundStyle(.white)
                         .background(Color(red: 0, green: 0, blue: 0.5))
                         .clipShape(Capsule())
-                    Spacer()
+                        Spacer()
+                    }.padding()
                 }
-                
-                
-                List($selections, id: \.self, editActions: .delete) { $selection in
-                    HStack {
-                        Text(processor.driverInfo.lookup[selection.name]?.sName ?? "")
-                        Text(String(selection.lap))
-                    }
-                }
-                
             }
-            
         }
         .frame(maxHeight: .infinity)
         .padding()

@@ -114,7 +114,7 @@ class KafkaConsumer {
                 }
 
                 for try await records in group {
-                    try await processor.addtoQueue(records: records)
+                    try processor.addtoQueue(records: records)
                 }
             }
         }
