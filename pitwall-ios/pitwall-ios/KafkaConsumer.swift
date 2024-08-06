@@ -17,9 +17,9 @@ class KafkaConsumer {
         self.processor = DataProcessor
     }
     
-    var listen: Bool = true
-    let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
-    
+    final var listen: Bool = true
+    final let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
+        
     enum consumerError: Error {
         case alreadyExists
         case serverResponseError
@@ -28,7 +28,7 @@ class KafkaConsumer {
         case emptyResponse
     }
         
-    private func createConsumer(url: String, name: String) async throws -> () {
+    private func createConsumer(url: String, name: String) async throws {
         guard let url = URL(string: url) else {return}
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
@@ -50,7 +50,7 @@ class KafkaConsumer {
         }        
     }
 
-    private func subscribeConsumer(url: String, topics: [String]) async throws -> () {
+    private func subscribeConsumer(url: String, topics: [String]) async throws {
         guard let url = URL(string: url) else {return}
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
@@ -92,7 +92,7 @@ class KafkaConsumer {
         }
     }
     
-    func createAndSubscribeConsumer(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
+    func createAndSubscribeConsumer(kafkaURL: String, topics: [String], consumerGroup: String) async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for topic in topics {
                 group.addTask(priority: .userInitiated) {
@@ -104,8 +104,7 @@ class KafkaConsumer {
         }
     }
     
-    func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws -> () {
-        // TODO: Implement timeout to stop listening for new messages
+    func startListening(kafkaURL: String, topics: [String], consumerGroup: String) async throws {
         while listen {
             try await withThrowingTaskGroup(of: [[String:AnyObject]].self) { group in
                 for topic in topics {
@@ -122,5 +121,29 @@ class KafkaConsumer {
             }
         }
         print("Kafka terminated")
+    }
+    
+    func checkTermination(kafkaURL: String, clusterID: String, topics: [String], consumerGroup: String) async throws -> Bool {
+        for topic in topics {
+            let url = "\(kafkaURL)/v3/clusters/\(clusterID)/consumer-groups/\(topic)\(consumerGroup)/lag-summary"
+            guard let url = URL(string: url) else {throw URLError(.badURL)}
+            var urlRequest = URLRequest(url: url)
+            urlRequest.httpMethod = "GET"
+            
+            let (data, response) = try await URLSession.shared.data(for: urlRequest)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                return false // TODO: Handle error
+            }
+            
+            do {
+                guard let serverResponse = (try JSONSerialization.jsonObject(with: data)) as? [String:AnyObject] else { throw consumerError.emptyResponse }
+                if (serverResponse["total_lag"] as? Int) != 0 {
+                    return false
+                }
+            } catch {
+                throw consumerError.decodeError
+            }
+        }
+        return true
     }
 }

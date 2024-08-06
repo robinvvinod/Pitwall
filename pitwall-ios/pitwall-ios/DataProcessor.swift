@@ -24,7 +24,6 @@ class DataProcessor: DataStore {
     let sessionSpecific = ["LapCount", "SessionStatus", "TotalLaps", "RCM"]
     
     var dataQueue: [SingleRecord] = []
-    let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
         
     func addtoQueue(records: [[String:AnyObject]]) {
         for record in records {
