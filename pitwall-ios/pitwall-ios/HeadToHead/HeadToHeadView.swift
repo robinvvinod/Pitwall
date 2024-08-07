@@ -27,7 +27,6 @@ struct HeadToHeadView: View {
             VStack(alignment: .leading) {
                 Text("Head To Head")
                     .font(.title)
-                    .foregroundStyle(.black)
                     .fontWeight(.heavy)
                     .padding(.leading)
                     .padding(.top)
@@ -165,21 +164,18 @@ struct HeadToHeadView: View {
         VStack(alignment: .leading) {
             Text("Head To Head")
                 .font(.title)
-                .foregroundStyle(.black)
                 .fontWeight(.heavy)
                 .padding(.leading)
                 .padding(.top)
             
             Text("Select up to 5 laps to compare side-by-side")
                 .padding(.leading)
-                .foregroundStyle(.black)
                 .font(.caption)
             
             HStack {
                 Picker("Select a driver", selection: $selectedDriver) {
                     ForEach(processor.driverList, id: \.self) { num in
                         Text(processor.driverInfo.lookup[num]?.sName ?? "")
-                            .foregroundStyle(.black)
                     }
                 }
                 .pickerStyle(.inline)
@@ -190,7 +186,6 @@ struct HeadToHeadView: View {
                     if let keys = keys {
                         ForEach(Array(keys), id: \.self) { key in
                             Text(key)
-                                .foregroundStyle(.black)
                         }
                     }
                     

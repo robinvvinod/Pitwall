@@ -208,7 +208,7 @@ class DataStore: ObservableObject {
                 
             case "Tyre":
                 driverObject.TyreType = data[0]
-                driverObject.laps[data[2], setDefault: Lap(TyreType: (driverObject.TyreType,0))].TyreType = (data[0], timestamp)
+                driverObject.laps[data[2], setDefault: Lap(TyreType: (data[0], timestamp))].TyreType = (data[0], timestamp)
                 
             case "SectorTime":
                 if data[1] == "1" {

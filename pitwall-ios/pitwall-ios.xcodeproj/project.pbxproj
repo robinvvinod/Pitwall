@@ -23,6 +23,7 @@
 		0019CB5D2A45879500B8460A /* SCNPathNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019CB5C2A45879500B8460A /* SCNPathNode.swift */; };
 		0019CB5F2A4587B500B8460A /* SCNVector3+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */; };
 		0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0022E7902A03EF170030BB29 /* DataProcessor.swift */; };
+		002607062C635500008C1E7B /* DriverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002607052C635500008C1E7B /* DriverView.swift */; };
 		003AE4232A179AEB00B8EA6C /* SessionInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */; };
 		003AE4252A179C8F00B8EA6C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */; };
 		003AE4272A179D4200B8EA6C /* CarDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4262A179D4200B8EA6C /* CarDataView.swift */; };
@@ -81,6 +82,7 @@
 		0019CB5C2A45879500B8460A /* SCNPathNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SCNPathNode.swift; sourceTree = "<group>"; };
 		0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SCNVector3+Extensions.swift"; sourceTree = "<group>"; };
 		0022E7902A03EF170030BB29 /* DataProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataProcessor.swift; sourceTree = "<group>"; };
+		002607052C635500008C1E7B /* DriverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriverView.swift; sourceTree = "<group>"; };
 		0034ACC42B3BCE280006B903 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionInfoView.swift; sourceTree = "<group>"; };
 		003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
@@ -154,11 +156,9 @@
 				0034ACC42B3BCE280006B903 /* Info.plist */,
 				000CFFA92A0104A600AAF530 /* pitwall_iosApp.swift */,
 				000CFFAB2A0104A600AAF530 /* ContentView.swift */,
-				005998F02A1DB56200A20410 /* GapOrIntervalView.swift */,
-				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
 				003AE4222A179AEB00B8EA6C /* SessionInfoView.swift */,
 				003AE4242A179C8F00B8EA6C /* LeaderboardView.swift */,
-				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
+				002607042C6354DA008C1E7B /* DriverView */,
 				00ED01752C5B9641002CE177 /* HeadToHead */,
 				004B58522A7CEC9900A0ECEE /* TrackDominance */,
 				004B584F2A7CEC1700A0ECEE /* SpeedTrace */,
@@ -213,6 +213,17 @@
 				0019CB5E2A4587B500B8460A /* SCNVector3+Extensions.swift */,
 			);
 			path = SCNPath;
+			sourceTree = "<group>";
+		};
+		002607042C6354DA008C1E7B /* DriverView */ = {
+			isa = PBXGroup;
+			children = (
+				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
+				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
+				005998F02A1DB56200A20410 /* GapOrIntervalView.swift */,
+				002607052C635500008C1E7B /* DriverView.swift */,
+			);
+			path = DriverView;
 			sourceTree = "<group>";
 		};
 		004B584F2A7CEC1700A0ECEE /* SpeedTrace */ = {
@@ -317,7 +328,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1430;
-				LastUpgradeCheck = 1510;
+				LastUpgradeCheck = 1540;
 				TargetAttributes = {
 					000CFFA52A0104A600AAF530 = {
 						CreatedOnToolsVersion = 14.3;
@@ -406,6 +417,7 @@
 				000CFFAC2A0104A600AAF530 /* ContentView.swift in Sources */,
 				000CFFAA2A0104A600AAF530 /* pitwall_iosApp.swift in Sources */,
 				000CFFB62A0104A700AAF530 /* pitwall_ios.xcdatamodeld in Sources */,
+				002607062C635500008C1E7B /* DriverView.swift in Sources */,
 				009962D42AA15AF500BF2655 /* HeadToHeadView.swift in Sources */,
 				0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */,
 				004F36EE2A6BC68200239CCA /* TrackDominanceView.swift in Sources */,

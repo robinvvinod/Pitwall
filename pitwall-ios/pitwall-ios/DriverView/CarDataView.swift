@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CarDataView: View {
     
-    var driver: String
+    let driver: String
     @EnvironmentObject var processor: DataProcessor
     
     var body: some View {
