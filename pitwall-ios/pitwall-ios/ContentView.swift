@@ -11,7 +11,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     let kafkaURL = "http://192.168.1.79:8082"
-    let kafkaClusterID = "FATIfHyjRveUkj5wZIIfjw"
+    let kafkaClusterID = "sx8WWs3WQKaOe82FPFl7bg"
     //let consumerGroup = "pitwall_ios_"
     let topics = ["LapTime","CurrentLap","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps", "TyreAge", "Tyre"]
     
@@ -21,9 +21,9 @@ struct ContentView: View {
     
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack {
+            VStack {
                 
-                SessionInfoView(country: "United States", raceName: "Miami International Autodrome", countryFlag: "🇺🇸", roundNum: "5", roundDate: "05 - 07 May", sessionName: "Sprint Race")
+                SessionInfoView(country: "Azerbaijan", raceName: "Baku City Circuit", countryFlag: "🇦🇿", roundNum: "4", roundDate: "28 - 30 April", sessionName: "Race")
                 
                 
                 LeaderboardView()
@@ -31,9 +31,7 @@ struct ContentView: View {
                 DriverView()
                 
                 HeadToHeadView(viewModel: HeadToHeadViewModel(processor: processor))
-                                
-                //GapOrIntervalView(driver: "14", type: "GAP")
-                                                                    
+                                                                                                    
                 Button("Connect to kafka") {
                     
                     let kafka = KafkaConsumer(DataProcessor: processor)
@@ -78,11 +76,5 @@ struct ContentView: View {
                 Spacer()
             }.environmentObject(processor)
         }.padding(1)
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView().previewDevice("iPhone 14 Pro").environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 }

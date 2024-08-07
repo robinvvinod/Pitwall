@@ -72,24 +72,26 @@ struct SessionInfoView: View {
                         HStack {
                             Spacer()
                             Text("LAP")
-                                .font(.title2)
+                                .font(.headline)
                                 .padding(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer()
+                                .fixedSize()
+                            
                             Text("\(processor.sessionDatabase.CurrentLap) / \(processor.sessionDatabase.TotalLaps)")
-                                .font(.title2)
+                                .font(.headline)
                                 .fontWeight(.bold)
                                 .padding(.trailing)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .fixedSize()
                             Spacer()
                         }
-                        
                     }
-                    .frame(width: 200, height: 50)
+                    .frame(width: 150, height: 50)
                     .padding(.trailing)
                     .fixedSize(horizontal: false, vertical: true)
                     
-                }.fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
                 
             }.fixedSize(horizontal: false, vertical: true)
             

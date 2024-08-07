@@ -162,23 +162,6 @@ class ProcessLiveData:
                             )
                         )
 
-                    if ("LapTime" in indvData) and ("LapNumber" in indvData):
-                        tasks.append(
-                            self._redis.hset(
-                                name=f'{driver}:{int(indvData["LapNumber"]) - 1}',
-                                key="LapTime",
-                                value=f'{indvData["LapTime"]}::{timestamp}',
-                            )
-                        )
-
-                        tasks.append(
-                            self._kafka.send(
-                                topic="LapTime",
-                                key=driver,
-                                value=f'{indvData["LapTime"]},{int(indvData["LapNumber"]) - 1}::{timestamp}',
-                            )
-                        )
-
                     if ("Compound" in indvData) and (indvData["Compound"] != "UNKNOWN"):
                         curLap = await self._get_current_lap(driver)
                         mapping = {
@@ -376,28 +359,21 @@ class ProcessLiveData:
                                     )
                                 )
 
-                            # If driver crossed start/finish line and is not currently in the pits, start a new lap
-                            if (
-                                await self._redis.hexists(
-                                    name=f"{driver}:{curLap}", key="PitIn"
+                            tasks.append(
+                                self._redis.hset(
+                                    name=driver,
+                                    key="CurrentLap",
+                                    value=f"{curLap + 1}::{timestamp}",
                                 )
-                                is False
-                            ):
-                                tasks.append(
-                                    self._redis.hset(
-                                        name=driver,
-                                        key="CurrentLap",
-                                        value=f"{curLap + 1}::{timestamp}",
-                                    )
-                                )
+                            )
 
-                                tasks.append(
-                                    self._kafka.send(
-                                        topic="CurrentLap",
-                                        key=driver,
-                                        value=f"{curLap + 1}::{timestamp}",
-                                    )
+                            tasks.append(
+                                self._kafka.send(
+                                    topic="CurrentLap",
+                                    key=driver,
+                                    value=f"{curLap + 1}::{timestamp}",
                                 )
+                            )
 
             if "Speeds" in msg[driver]:
                 for indvSpeed in msg[driver]["Speeds"]:
@@ -491,23 +467,6 @@ class ProcessLiveData:
                 else:
                     # Driver just exited pit
                     curLap = await self._get_current_lap(driver)
-
-                    # Start a new lap when driver exits pit
-                    tasks.append(
-                        self._redis.hset(
-                            name=driver,
-                            key="CurrentLap",
-                            value=f"{curLap + 1}::{timestamp}",
-                        )
-                    )
-
-                    tasks.append(
-                        self._kafka.send(
-                            topic="CurrentLap",
-                            key=driver,
-                            value=f"{curLap + 1}::{timestamp}",
-                        )
-                    )
 
                     tasks.append(
                         self._redis.hset(

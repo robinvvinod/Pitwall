@@ -1,5 +1,5 @@
 //
-//  Telemetry.swift
+//  TelemetryHelpers.swift
 //  pitwall-ios
 //
 //  Created by Robin on 18/5/23.

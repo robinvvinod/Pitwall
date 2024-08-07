@@ -85,7 +85,7 @@ struct LapHistoryView: View {
                                         .padding(.vertical, 6)
                                     
                                 case "Gap":
-                                    if j != 0 {
+                                    if j != 1 {
                                         let gap = String(format: "%.3f", (convertLapTimeToSeconds(time: lap.LapTime.value) - processor.sessionDatabase.FastestLapTime))
                                         Text("+\(gap)")
                                             .padding(8)

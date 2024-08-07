@@ -26,7 +26,7 @@ struct HeadToHeadView: View {
         if let viewModels = viewModels {
             VStack(alignment: .leading) {
                 Text("Head To Head")
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.heavy)
                     .padding(.leading)
                     .padding(.top)
@@ -163,7 +163,7 @@ struct HeadToHeadView: View {
     var selectorView: some View {
         VStack(alignment: .leading) {
             Text("Head To Head")
-                .font(.title)
+                .font(.title2)
                 .fontWeight(.heavy)
                 .padding(.leading)
                 .padding(.top)
