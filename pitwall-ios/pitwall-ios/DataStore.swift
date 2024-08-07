@@ -26,7 +26,7 @@ class DataStore: ObservableObject {
         }
     }
     
-    func sortByLapTime(driverList: [String]) -> [String] {
+    private func sortByLapTime(driverList: [String]) -> [String] {
         
         struct LapTimeStruct: Comparable {
             let driver: String

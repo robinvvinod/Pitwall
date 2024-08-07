@@ -35,13 +35,13 @@ struct LapHistoryView: View {
             Text("Lap")
                 .padding(8)
                 .font(.headline)
-                .foregroundColor(Color.black)
+                .foregroundStyle(Color.black)
             ForEach(1...(processor.driverDatabase[driver]?.CurrentLap ?? 1), id: \.self) { j in
                 HStack {
                     Text(String(j))
-                        .foregroundColor(Color.white)
+                        .foregroundStyle(Color.white)
                         .padding(8)
-                        .foregroundColor(Color.white)
+                        .foregroundStyle(Color.white)
                 }
                 .frame(maxWidth: .infinity)
                 .background(j % 2 == 0 ? Color.gray : Color.black) // Alternate row colours
@@ -60,7 +60,7 @@ struct LapHistoryView: View {
                     Text("\(headersArray[i])")
                         .padding(8)
                         .font(.headline)
-                        .foregroundColor(Color.black)
+                        .foregroundStyle(Color.black)
                     
                     ForEach(1...(processor.driverDatabase[driver]?.CurrentLap ?? 1), id: \.self) { j in
                         HStack { // HStack in case any column has more than 1 data point inside. E.g) Tyre
@@ -71,7 +71,7 @@ struct LapHistoryView: View {
                                 let curLap = convertLapTimeToSeconds(time: lap.LapTime.value)
                                 
                                 Text("\(lap.LapTime.value)")
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                     .padding(.vertical, 2)
                                     .padding(.horizontal, 8)
                                     .background(curLap.isNearlyEqual(to: driverFastestLap) ? curLap.isNearlyEqual(to: processor.sessionDatabase.FastestLapTime) ? Color.purple : Color.green : nil)
@@ -83,29 +83,25 @@ struct LapHistoryView: View {
                                     let gap = String(format: "%.3f", (convertLapTimeToSeconds(time: lap.LapTime.value) - processor.sessionDatabase.FastestLapTime))
                                     Text("+\(gap)")
                                         .padding(8)
-                                        .foregroundColor(Color.white)
+                                        .foregroundStyle(Color.white)
                                 } else { // First driver has no gap to fastest lap attribute
                                     Text("+0.000")
                                         .padding(8)
-                                        .foregroundColor(Color.white)
+                                        .foregroundStyle(Color.white)
                                 }
                                 
                             case "Tyre":
-                                Text("\(lap.TyreAge.value)")
-                                    .padding(.vertical, 8)
-                                    .padding(.leading, 8)
-                                    .foregroundColor(Color.white)
-                                Text("\(lap.TyreType.value)")
-                                    .padding(.vertical, 8)
-                                    .padding(.trailing, 8)
-                                    .foregroundColor(Color.white)
+                                let info = "\(lap.TyreType.value)" + " " + "\(lap.TyreAge.value)"
+                                Text(info )
+                                    .padding(8)
+                                    .foregroundStyle(.white)
                                 
                             case "Sector 1":
                                 let driverFastestSector = processor.driverDatabase[driver]?.FastestSector1 ?? 0
                                 let curSector = convertLapTimeToSeconds(time: lap.Sector1Time.value)
                                 
                                 Text("\(lap.Sector1Time.value)")
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                     .padding(.vertical, 2)
                                     .padding(.horizontal, 8)
                                     .background(curSector.isNearlyEqual(to: driverFastestSector) ? curSector.isNearlyEqual(to: processor.sessionDatabase.FastestSector1) ? Color.purple : Color.green : nil)
@@ -117,7 +113,7 @@ struct LapHistoryView: View {
                                 let curSector = convertLapTimeToSeconds(time: lap.Sector2Time.value)
                                 
                                 Text("\(lap.Sector2Time.value)")
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                     .padding(.vertical, 2)
                                     .padding(.horizontal, 8)
                                     .background(curSector.isNearlyEqual(to: driverFastestSector) ? curSector.isNearlyEqual(to: processor.sessionDatabase.FastestSector2) ? Color.purple : Color.green : nil)
@@ -129,7 +125,7 @@ struct LapHistoryView: View {
                                 let curSector = convertLapTimeToSeconds(time: lap.Sector3Time.value)
                                 
                                 Text("\(lap.Sector3Time.value)")
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                     .padding(.vertical, 2)
                                     .padding(.horizontal, 8)
                                     .background(curSector.isNearlyEqual(to: driverFastestSector) ? curSector.isNearlyEqual(to: processor.sessionDatabase.FastestSector3) ? Color.purple : Color.green : nil)
@@ -139,17 +135,17 @@ struct LapHistoryView: View {
                             case "ST1":
                                 Text("\(lap.Sector1SpeedTrap.value)")
                                     .padding(8)
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                 
                             case "ST2":
                                 Text("\(lap.Sector2SpeedTrap.value)")
                                     .padding(8)
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                 
                             case "ST3":
                                 Text("\(lap.FinishLineSpeedTrap.value)")
                                     .padding(8)
-                                    .foregroundColor(Color.white)
+                                    .foregroundStyle(Color.white)
                                 
                             default:
                                 Text("")

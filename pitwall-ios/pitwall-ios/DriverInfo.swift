@@ -37,14 +37,15 @@ struct DriverInfo {
         "77": infoStruct(rNum: 77, fName: "Valtteri Bottas", sName: "BOT", tShort: "ALF", tLong: "Alfa Romeo"),
         "24": infoStruct(rNum: 24, fName: "Guanyu Zhou", sName: "ZHO", tShort: "ALF", tLong: "Alfa Romeo"),
         "22": infoStruct(rNum: 22, fName: "Yuki Tsunoda", sName: "TSU", tShort: "ALP", tLong: "Alpha Tauri"),
-        "3": infoStruct(rNum: 3, fName: "Daniel Ricciardo", sName: "RIC", tShort: "ALP", tLong: "Alpha Tauri")
+        "3": infoStruct(rNum: 3, fName: "Daniel Ricciardo", sName: "RIC", tShort: "ALP", tLong: "Alpha Tauri"),
+        "21": infoStruct(rNum: 21, fName: "Nyck De Vries", sName: "DEV", tShort: "ALP", tLong: "Alpha Tauri")
         ]
     
     func getDriverNums() -> [String] {
         return Array(lookup.keys)
     }
     
-    func getDriverSName() -> [String] {
+    func getDriverSNames() -> [String] {
         var names = [String]()
         for driver in lookup {
             names.append(driver.value.sName)
