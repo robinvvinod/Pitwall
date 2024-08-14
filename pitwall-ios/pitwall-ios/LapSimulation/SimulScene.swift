@@ -58,18 +58,24 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
          "F1 2022 {FREE!!}" (https://skfb.ly/oFxwG) by 3dblenderlol is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
         */
         
-        guard let url = Bundle.main.url(forResource: "f1_model", withExtension: "obj", subdirectory: "SceneKitAssets.scnassets") else { fatalError("Failed to find model file.")
-        }
-
-        let asset = MDLAsset(url:url)
-        guard let carObject = asset.object(at: 0) as? MDLMesh else {
-            fatalError("Failed to get mesh from asset.")
+        let asset = SCNScene(named: "SceneKitAssets.scnassets/f1_model.scn")!
+        guard let node = asset.rootNode.childNode(withName: "model", recursively: false) else {
+            return SCNNode()
         }
         
-        let node = SCNNode(mdlObject: carObject)
-        node.geometry?.firstMaterial?.emission.contents = color
         node.scale = SCNVector3(x: 1.08, y: 1, z: 1.18)
-        node.opacity = 0.5
+//        node.opacity = 0.5
+        
+        if let carMesh = node.childNode(withName: "car", recursively: false) {
+            carMesh.enumerateChildNodes { subNode, stop  in
+                if let materials = subNode.geometry?.materials {
+                    for mat in materials {
+                        mat.diffuse.contents = color
+                    }
+                }
+            }
+        }
+
         return node.flattenedClone()
     }
     

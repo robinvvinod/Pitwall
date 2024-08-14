@@ -10,7 +10,7 @@ import SwiftUI
 struct LapHistoryView: View {
     
     let driver: String
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     
     var body: some View {
         if processor.driverDatabase[driver]?.CurrentLap != 0 {

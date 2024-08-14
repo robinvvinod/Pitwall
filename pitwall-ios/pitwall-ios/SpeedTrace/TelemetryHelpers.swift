@@ -7,7 +7,7 @@
 
 import Foundation
 
-func integrate(pt1: [Double], pt2: [Double]) -> Double {
+private func integrate(pt1: [Double], pt2: [Double]) -> Double {
     /*
      Find area under speed-time graph, which is the distance travelled
      eq: [x,y]

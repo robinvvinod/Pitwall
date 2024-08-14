@@ -9,16 +9,16 @@ import Foundation
 
 // API Reference: https://docs.confluent.io/platform/current/kafka-rest/api.html
 
-class KafkaConsumer {
+final class KafkaConsumer {
     
-    var processor: DataProcessor
+    private var processor: DataProcessor
     
     init(DataProcessor: DataProcessor) {
         self.processor = DataProcessor
     }
     
-    final var listen: Bool = true
-    final let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
+    var listen: Bool = true
+    private let dispatchQueue = DispatchQueue(label: "processRecordQueue", qos: .userInitiated)
         
     enum consumerError: Error {
         case alreadyExists

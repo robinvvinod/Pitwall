@@ -10,7 +10,7 @@ import SceneKit
 
 struct LapSimulationView: View {
         
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     let viewModel: LapSimulationViewModel
     
     var body: some View {

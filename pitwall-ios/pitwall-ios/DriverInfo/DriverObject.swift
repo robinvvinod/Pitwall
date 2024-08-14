@@ -7,7 +7,7 @@
 
 import Foundation
 
-class Lap: Comparable {
+final class Lap: Comparable {
     // Historical data
     
     // Tyre type is only broadcast by backend whenever there is a change. Hence, when a new lap is created, value from previous lap
@@ -48,7 +48,7 @@ class Lap: Comparable {
     }
 }
 
-class Driver {
+final class Driver {
     let racingNum: String
     
     init(racingNum: String) {

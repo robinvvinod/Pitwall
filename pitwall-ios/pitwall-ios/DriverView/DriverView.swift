@@ -9,7 +9,7 @@ import SwiftUI
 
 struct DriverView: View {
     
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     @State private var selectedDriver: String = "1"
 
     var body: some View {

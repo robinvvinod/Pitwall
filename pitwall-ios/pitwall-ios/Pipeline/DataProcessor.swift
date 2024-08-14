@@ -7,7 +7,7 @@
 
 import Foundation
 
-class DataProcessor: DataStore {
+final class DataProcessor: DataStore {
     
     private struct SingleRecord: Comparable {
         let topic: String

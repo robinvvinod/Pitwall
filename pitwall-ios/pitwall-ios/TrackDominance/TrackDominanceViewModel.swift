@@ -9,7 +9,7 @@ import Foundation
 
 class TrackDominanceViewModel {
     
-    struct SpeedPosData: Comparable {
+    private struct SpeedPosData: Comparable {
         // SpeedPosData is used as a temporary container that stores both position data and speed data extracted from CarData
         struct SinglePosition: Comparable {
             let x: Float

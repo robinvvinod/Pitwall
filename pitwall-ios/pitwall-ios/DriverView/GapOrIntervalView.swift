@@ -12,7 +12,7 @@ struct GapOrIntervalView: View {
     
     let driver: String
     let type: String // Set to "GAP" or "INT" representing GapToLeader or IntervalToPositionAhead respectively
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     @State private var intervalsArray = [(lap: Int, gap: Float)]()
     
     @State private var selectedIndex: Int?

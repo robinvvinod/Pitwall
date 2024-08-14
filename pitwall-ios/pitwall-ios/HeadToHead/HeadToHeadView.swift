@@ -9,7 +9,7 @@ import SwiftUI
 
 struct HeadToHeadView: View {
     
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     let viewModel: HeadToHeadViewModel
     @State private var viewModels: (SpeedTraceViewModel, TrackDominanceViewModel, LapSimulationViewModel)?
     
@@ -38,7 +38,7 @@ struct HeadToHeadView: View {
                     .padding(.top)
                     .fontWeight(.heavy)
                     .font(.body)
-                SpeedTraceView(processor: _processor, viewModel: viewModels.0)
+                SpeedTraceView(viewModel: viewModels.0)
                     .padding()
                     .frame(height: 350)
                 Text("Track Dominance")
@@ -52,7 +52,7 @@ struct HeadToHeadView: View {
                     .padding(.leading)
                     .fontWeight(.heavy)
                     .font(.body)
-                LapSimulationView(processor: _processor, viewModel: viewModels.2)
+                LapSimulationView(viewModel: viewModels.2)
                     .padding()
                     .frame(height: 350)
             }

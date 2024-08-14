@@ -10,7 +10,7 @@ import Charts
 
 struct SpeedTraceView: View {
     
-    @EnvironmentObject var processor: DataProcessor
+    @EnvironmentObject private var processor: DataProcessor
     @StateObject var viewModel: SpeedTraceViewModel
     @State private var selectedIndex: Double? // Used to hold x-val of selected point
     
