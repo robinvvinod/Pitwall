@@ -21,13 +21,6 @@ class LapSimulationViewModel {
     struct SinglePosition { // Stores one set of coordinates of a car at a given time from the start of the lap
         var coords: SCNVector3 // Current coordinate of car
         var timestamp: Double // No. of seconds since the start of the lap
-        
-        /*
-         No. of seconds the car took to get to this coordinate from the previous coordinate.
-         Defaults to 0 since the number of total positions changes during resampling.
-         Hence, delta between this and last coord can only be calculated once resampling is finished.
-        */
-        var duration: Double = 0
         var interpolated: Bool = false // True if the coord was calculated via interpolation
         
         // Any position will be sorted in chronological order
@@ -35,7 +28,7 @@ class LapSimulationViewModel {
             return lhs.timestamp < rhs.timestamp
         }
     }
-
+    
     class CarPositions { // Contains all the positions of a given car for a given lap
         var positions: [SinglePosition] = []
     }
@@ -46,8 +39,8 @@ class LapSimulationViewModel {
     var trackNode = SCNNode()
     var startPos = [(p: SCNVector3, l: SCNVector3)]()
     var driverList = [String]()
-    private var lapData = [Lap]()
-    private var carPos = [CarPositions]()
+    private var lapData = [Lap]() // Raw laps sorted by lap time
+    private var carPos = [CarPositions]() // Position data sorted by lap time
     
     private var processor: DataProcessor
     
@@ -58,10 +51,11 @@ class LapSimulationViewModel {
     func load(drivers: [String], laps: [Int]) {
         for i in 0...(drivers.count - 1) {
             let lap = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]
-            if let lap = lap {
+            if let lap {
                 if !lap.PositionData.isEmpty {
                     lapData.insertSorted(newItem: lap)
                     carPos.append(CarPositions())
+                    // Legend in LapSimulationView includes driver sName and Lap Number, stored in driverList
                     let drvInfo = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
                     driverList.insert(drvInfo, at: lapData.firstIndex(of: lap) ?? 0)
                 } else {
@@ -80,11 +74,10 @@ class LapSimulationViewModel {
                 syncStartPoint(target: carPos[i])
                 setEndPoint(lap: lapData[i], carPos: carPos[i])
             }
-            calculateDurations(carPos: carPos[i])
             carSeq.append(generateActionSequence(carPos: carPos[i]))
             startPos.append((p: carPos[i].positions[0].coords, l: carPos[i].positions[1].coords))
         }
-
+        
         trackNode = SCNPathNode(path: carPos[0].positions.map { $0.coords }, width: 12, curvePoints: 32)
         carPos = [] // These objects are no longer needed. Deallocating memory
         lapData = []
@@ -97,7 +90,7 @@ class LapSimulationViewModel {
          they are now relative to t = 0 when the car crossed the SL line.
          We interpolate the coords at which the car crossed the start finish line by drawing a line between the first two coords of the car and
          finding the coords when t = 0
-        */
+         */
         
         let posData = lap.PositionData
         let delta = posData[0].timestamp - lap.StartTime
@@ -115,7 +108,7 @@ class LapSimulationViewModel {
             }
         }
         
-        let startPoint = linearInterpolate(prev: carPos.positions[0], next: carPos.positions[1], t: 0)
+        let startPoint = linearInterpolatePos(prev: carPos.positions[0], next: carPos.positions[1], t: 0)
         carPos.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
     }
     
@@ -128,14 +121,13 @@ class LapSimulationViewModel {
          
          The chase cars start point is synced to the lead cars. The closest point to the lead cars start point in the path of the chase
          car is set as it's start point.
-        */
-        let lead = carPos[0]
+         */
         
         func distance(p1: SCNVector3, p2: SCNVector3) -> Float { // Returns distance between points
             return sqrtf(powf(p1.x - p2.x, 2) + powf(p1.z - p2.z, 2))
         }
         
-        let refPoint = lead.positions[0].coords // Lead cars start point is used as the reference
+        let refPoint = carPos[0].positions[0].coords // Lead cars start point is used as the reference
         // Point 1 and 2 are the closest two points to the lead cars start point
         var prev = distance(p1: target.positions[0].coords, p2: refPoint)
         var count = 1
@@ -150,49 +142,67 @@ class LapSimulationViewModel {
         let point1 = target.positions[count-1]
         let point2 = target.positions[count]
         
+        // TODO: Crash can occur if point1 and 2 are the same
+        
         /*
-         A line is drawn that contains point 1 and 2. The point on the line closest to the lead cars start point is calculated by finding
-         the normal to the line that passes through lead cars start point. This is the new start point of the chase car. The time at which
-         the car passes through this new start point is calculated. All the chase timestamps are offset such that they are relative to the
-         new start point.
+         A line is drawn that contains point 1 and 2. The point on the line closest to the lead cars start point is calculated by finding the normal to the line that passes through lead cars start point. This is the new start point of the chase car. The time at which the car passes through this new start point is calculated. All the chase timestamps are offset such that they are relative to the new start point.
          
          The line is assumed to be 2D (x,z axes) for simplicity of calculation
-        */
-        
-        // TODO: Better handling in case where gradient is undefined / 0
-        if ((point1.coords.x - point2.coords.x) == 0) || ((point1.coords.z - point2.coords.z) == 0) {
-            return
-        }
-        
-        let gradient = (point1.coords.z - point2.coords.z) / (point1.coords.x - point2.coords.x)
-        let yIntrcpt = point1.coords.z - (gradient * point1.coords.x)
-        
-        let gradientNormal = -(1/gradient)
-        let yIntrcptNormal = refPoint.z - (gradientNormal * refPoint.x) // The normal which passes through lead start point is calculated
+         */
         
         /*
-         The intersection between line and normal is used to calculate new start point
-         z = m₁x + c₁ --> (line)
-         z = m₂x + c₂ --> (normal)
-         At insersection point:
-         m₁x + c₁ = m₂x + c₂
-         (m₁ - m₂)x = c₂ - c₁
-         x = (c₂ - c₁) / (m₁ - m₂)
-        */
-        let x = (yIntrcpt - yIntrcptNormal) / (gradientNormal - gradient)
-        let z = (gradient * x) + yIntrcpt
+         Edge case (1):
+         Gradient of line is undefined: Closest point has the same z coord as refPoint
+         Edge case (2):
+         Gradient of line is 0: Closest point has the same x coord as refPoint
+         */
+        var x: Float
+        var z: Float
+        var deltaT: Float
         
-        var t: Float
-        var m: Float
-        var c: Float
-        let numerator = point1.timestamp - point2.timestamp
-        m = Float(numerator) / (point1.coords.x - point2.coords.x)
-        c = Float(point1.timestamp) - (m * point1.coords.x)
-        t = (m*x) + c // Time of new start point relative to old start point
-
+        if (point1.coords.x - point2.coords.x) == 0 { // Edge case (1)
+            x = point1.coords.x
+            z = refPoint.z
+            
+            let numerator = point1.timestamp - point2.timestamp
+            let m = Float(numerator) / (point1.coords.z - point2.coords.z)
+            let c = Float(point1.timestamp) - (m * point1.coords.z)
+            deltaT = (m*z) + c // Time of new start point relative to old start point
+            
+        } else {
+            if (point1.coords.z - point2.coords.z) == 0 { // Edge case (2)
+                x = refPoint.x
+                z = point1.coords.z
+            } else {
+                let gradient = (point1.coords.z - point2.coords.z) / (point1.coords.x - point2.coords.x)
+                let zIntrcpt = point1.coords.z - (gradient * point1.coords.x)
+                
+                let gradientNormal = -(1/gradient)
+                let zIntrcptNormal = refPoint.z - (gradientNormal * refPoint.x) // The normal which passes through lead start point is calculated
+                
+                /*
+                 The intersection between line and normal is used to calculate new start point
+                 z = m₁x + c₁ --> (line)
+                 z = m₂x + c₂ --> (normal)
+                 At insersection point:
+                 m₁x + c₁ = m₂x + c₂
+                 (m₁ - m₂)x = c₂ - c₁
+                 x = (c₂ - c₁) / (m₁ - m₂)
+                 */
+                x = (zIntrcpt - zIntrcptNormal) / (gradientNormal - gradient)
+                z = (gradient * x) + zIntrcpt
+            }
+            
+            let numerator = point1.timestamp - point2.timestamp
+            let m = Float(numerator) / (point1.coords.x - point2.coords.x)
+            let c = Float(point1.timestamp) - (m * point1.coords.x)
+            deltaT = (m*x) + c // Time of new start point relative to old start point
+        }
+        
+        // Adjust timestamps to be relative to new startPoint. Any positions before new startPoint is discarded
         var removeFirst = -1
         for i in 0...(target.positions.count - 1) {
-            target.positions[i].timestamp -= Double(t) // Offset all timestamps to be relative to new start point
+            target.positions[i].timestamp -= Double(deltaT) // Offset all timestamps to be relative to new start point
             if target.positions[i].timestamp < 0 {
                 removeFirst = i
             }
@@ -201,70 +211,33 @@ class LapSimulationViewModel {
         if removeFirst != -1 { // Remove positions that were before the new start point
             target.positions.removeFirst(removeFirst+1)
         }
-
+        
         let startPoint = SCNVector3(x: x, y: target.positions[0].coords.y, z: z)
         target.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
     }
     
     private func setEndPoint(lap: Lap, carPos: CarPositions) {
-        let lapTime = Double(convertLapTimeToSeconds(time: lapData[0].LapTime.value))
-        var count = carPos.positions.count - 1
-        var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
-
-        while delta > lapTime {
-            carPos.positions.remove(at: count)
-            count -= 1
-            delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
-        }
-        
-        let endPoint = linearInterpolate(prev: carPos.positions[carPos.positions.count - 2], next: carPos.positions[carPos.positions.count - 1], t: Float(lapTime))
-        carPos.positions.append(SinglePosition(coords: endPoint, timestamp: lapTime))
-    }
-    
-    private func syncEndPoint(lap: Lap, carPos: CarPositions) {
-        // Setting end point timestamp to be equal to total lap time
+        /*
+         Due to possible delays in data, position data for the next lap may accidentally end up in this lap. We remove any position data that has timestamp that meets the following condition (timestamp - startTime) > lapTime. We also interpolate the end position.
+         */
+//        let lapTime = Double(convertLapTimeToSeconds(time: lapData[0].LapTime.value)) // All cars stop when leader reaches finish
+        // TODO: Check discrepancy in ending position when turning off smoothing filter
         let lapTime = Double(convertLapTimeToSeconds(time: lap.LapTime.value))
         var count = carPos.positions.count - 1
         var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
-        /*
-         In the backend, the lap start timestamps are used to determine which lap a given position data
-         belongs to. Due to possible delays in receiving this new lap timestamp, it is possible that that the
-         position data contains values for the next lap which was wrongly attributed to the current lap. Hence it is possible for
-         (last timestamp - first timestamp) > (laptime). We can remove any position data for which this statement is true
-        */
+        
         while delta > lapTime {
-            carPos.positions.remove(at: count)
             count -= 1
             delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
         }
         
-        // Similar technique to syncStartPoints() is used to find closest point in cars path to the start point.
-        // Car should be at this new point at timestamp = laptime
+        carPos.positions.removeLast(carPos.positions.count - count - 1) // Removing extra positions
         
-        let refPoint = carPos.positions[0].coords
-        let point1 = carPos.positions[count].coords
-        let point2 = carPos.positions[count-1].coords
-        
-        // TODO: Better handling in case where gradient is undefined / 0
-        if ((point1.z - point2.z) == 0) || ((point1.x - point2.x) == 0) {
-            return
-        }
-        
-        let gradient = (point1.z - point2.z) / (point1.x - point2.x)
-        let yIntrcpt = point1.z - (gradient * point1.x)
-        
-        let gradientNormal = -(1/gradient)
-        let yIntrcptNormal = refPoint.z - (gradientNormal * refPoint.x)
-        
-        let x = (yIntrcpt - yIntrcptNormal) / (gradientNormal - gradient)
-        let z = (gradient * x) + yIntrcpt
-        
-        let lastPoint = SCNVector3(x: x, y: point1.y, z: z)
-        carPos.positions.append(
-            SinglePosition(coords: lastPoint, timestamp: lapTime)
-        )
+        let endPoint = linearInterpolatePos(prev: carPos.positions[carPos.positions.count - 2], next: carPos.positions[carPos.positions.count - 1], t: Float(lapTime))
+        carPos.positions.append(SinglePosition(coords: endPoint, timestamp: lapTime))
     }
-    
+        
+    // TODO: Evaluate difference between resampleToReference and resampleToFrequency
     private func resampleToReference(reference: CarPositions, target: CarPositions) {
         /*
          All timestamps in reference will be added to target, if not already present.
@@ -300,13 +273,14 @@ class LapSimulationViewModel {
         */
         
         let lastTimestamp = carPos.positions.last?.timestamp ?? 0
-        var curTime = 1 / frequency
+        let delta = 1 / frequency
+        var curTime = delta
         
         while curTime < lastTimestamp {
             let item = SinglePosition(coords: SCNVector3(), timestamp: curTime, interpolated: true)
             let index = carPos.positions.insertionIndexOf(elem: item) {$0 < $1}
             carPos.positions.insert(item, at: index)
-            curTime += 0.1
+            curTime += delta
         }
         
         fillMissing(carPos: carPos)
@@ -329,7 +303,7 @@ class LapSimulationViewModel {
                 var j = i
                 while j < carPos.positions.count { // Finding next non-interpolated data point
                     if carPos.positions[j].interpolated == false {
-                        carPos.positions[i].coords = linearInterpolate(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
+                        carPos.positions[i].coords = linearInterpolatePos(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
                         break
                     } else {
                         j += 1
@@ -339,10 +313,10 @@ class LapSimulationViewModel {
         }
     }
         
-    private func linearInterpolate(prev: SinglePosition, next: SinglePosition, t: Float) -> SCNVector3 {
+    private func linearInterpolatePos(prev: SinglePosition, next: SinglePosition, t: Float) -> SCNVector3 {
         /*
          t: Float is the timestamp for which the unknown coord should be calculated. The linear equation of a line formed by
-         (time1, x1/y1/z1) and (time2, x2/y2/z2) is calculated using subtraction method of solving simult. eqns.
+         (time1, x1/y1/z1) and (time2, x2/y2/z2) is calculated using subtraction method of solving simult. eqns. t is subsitituted in to find unknown coord
          
          m is gradient, c is y-intercept
          t₁ = mx₁ + c --> (1)
@@ -352,39 +326,19 @@ class LapSimulationViewModel {
          c = (t₁ - mx₁)
         */
         
-        let numerator = Float(prev.timestamp - next.timestamp)
-        var x: Float = 0
-        var y: Float = 0
-        var z: Float = 0
-        var m: Float = 0
-        var c: Float = 0
-        
-        // Solving x
-        if (prev.coords.x - next.coords.x).isNearlyEqual(to: 0) {
-            x = prev.coords.x
-        } else {
-            m = numerator / (prev.coords.x - next.coords.x)
-            c = Float(prev.timestamp) - (m * prev.coords.x)
-            x = (t - c) / m
+        func solveEqn(prev: Float, next: Float, prevTime: Double, nextTime: Double) -> Float {
+            let numerator = Float(prevTime - nextTime)
+            if (prev - next).isNearlyEqual(to: 0) {
+                return prev
+            }
+            let m = numerator / (prev - next)
+            let c = Float(prevTime) - (m * prev)
+            return (t - c) / m
         }
         
-        // Solving y
-        if (prev.coords.y - next.coords.y).isNearlyEqual(to: 0) {
-            y = prev.coords.y
-        } else {
-            m = numerator / (prev.coords.y - next.coords.y)
-            c = Float(prev.timestamp) - (m * prev.coords.y)
-            y = (t - c) / m
-        }
-        
-        // Solving z
-        if (prev.coords.z - next.coords.z).isNearlyEqual(to: 0) {
-            z = prev.coords.z
-        } else {
-            m = numerator / (prev.coords.z - next.coords.z)
-            c = Float(prev.timestamp) - (m * prev.coords.z)
-            z = (t - c) / m
-        }
+        let x = solveEqn(prev: prev.coords.x, next: next.coords.x, prevTime: prev.timestamp, nextTime: next.timestamp)
+        let y = solveEqn(prev: prev.coords.y, next: next.coords.y, prevTime: prev.timestamp, nextTime: next.timestamp)
+        let z = solveEqn(prev: prev.coords.z, next: next.coords.z, prevTime: prev.timestamp, nextTime: next.timestamp)
         
         return SCNVector3(x: x, y: y, z: z)
     }
@@ -461,13 +415,6 @@ class LapSimulationViewModel {
         }
     }
     
-    private func calculateDurations(carPos: CarPositions) {
-        // Once all resampling is done, calculate final durations
-        for i in 1...(carPos.positions.count - 1) {
-            carPos.positions[i].duration = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp
-        }
-    }
-    
     private func generateActionSequence(carPos: CarPositions) -> SCNAction {
         var seq: [SCNAction] = []
         for i in 1...(carPos.positions.count - 1) {
@@ -478,7 +425,7 @@ class LapSimulationViewModel {
             let x = carPos.positions[i].coords.x
             let y = carPos.positions[i].coords.y
             let z = carPos.positions[i].coords.z
-            let dur = carPos.positions[i].duration
+            let dur = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp // No. of seconds taken for animation
             
             /*
              Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
