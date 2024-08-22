@@ -42,7 +42,7 @@ struct SimulSceneView: UIViewRepresentable {
         @objc func handleTap(_ gestureRecognize: UIGestureRecognizer) {
             var inMotion = false
             for i in 0...(scene.carNodes.count - 1) {
-                if scene.carNodes[i].position != scene.startPos[i].p { // check if any cars are already in motion or at end point
+                if scene.carNodes[i].position != scene.startPosList[i].startPos { // check if any cars are already in motion or at end point
                     inMotion = true
                     break
                 }
@@ -52,7 +52,7 @@ struct SimulSceneView: UIViewRepresentable {
                 var actions = [SCNAction]()
                 for i in 0...(scene.carNodes.count - 1) {
                     let action = SCNAction.customAction(duration: 0) { (node, elapsedTime) in
-                        self.scene.carNodes[i].runAction(self.scene.carSeq[i])
+                        self.scene.carNodes[i].runAction(self.scene.actionSequences[i])
                     }
                     actions.append(action)
                 }
@@ -62,13 +62,14 @@ struct SimulSceneView: UIViewRepresentable {
                 // Reset car back to start point
                 scene.rootNode.removeAllActions()
                 for i in 0...(scene.carNodes.count - 1) {
-                    scene.carNodes[i].position = scene.startPos[i].p
+                    scene.carNodes[i].position = scene.startPosList[i].startPos
+                    scene.carNodes[i].look(at: scene.startPosList[i].lookAt, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
                 }
                 
                 var actions = [SCNAction]()
                 for i in 0...(scene.carNodes.count - 1) {
                     let action = SCNAction.customAction(duration: 0) { (node, elapsedTime) in
-                        self.scene.carNodes[i].runAction(self.scene.carSeq[i])
+                        self.scene.carNodes[i].runAction(self.scene.actionSequences[i])
                     }
                     actions.append(action)
                 }

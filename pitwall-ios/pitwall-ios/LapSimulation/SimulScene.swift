@@ -11,17 +11,17 @@ import SceneKit.ModelIO
 class SimulScene: SCNScene, SCNSceneRendererDelegate {
     
     var carNodes = [SCNNode]()
-    var carSeq: [SCNAction]
-    var startPos: [(p: SCNVector3, l: SCNVector3)]
+    var actionSequences: [SCNAction]
+    var startPosList: [(startPos: SCNVector3, lookAt: SCNVector3)]
     private var trackNode: SCNNode
     private var cameraPos: LapSimulationViewModel.CameraPosition
     private var cameraNode: SCNNode
     
-    init(carSeq: [SCNAction], cameraPos: LapSimulationViewModel.CameraPosition, trackNode: SCNNode, startPos: [(p: SCNVector3, l: SCNVector3)]) {
-        self.carSeq = carSeq
+    init(actionSequences: [SCNAction], cameraPos: LapSimulationViewModel.CameraPosition, trackNode: SCNNode, startPosList: [(startPos: SCNVector3, lookAt: SCNVector3)]) {
+        self.actionSequences = actionSequences
         self.cameraPos = cameraPos
         self.trackNode = trackNode
-        self.startPos = startPos
+        self.startPosList = startPosList
         self.cameraNode = SCNNode()
 
         super.init()
@@ -37,11 +37,11 @@ class SimulScene: SCNScene, SCNSceneRendererDelegate {
         
         let colorMap = [UIColor.blue, UIColor.green, UIColor.orange, UIColor.purple, UIColor.red]
         rootNode.addChildNode(self.trackNode)
-        for i in 0...(self.carSeq.count - 1) {
+        for i in 0...(self.actionSequences.count - 1) {
             self.carNodes.append(loadModel(color: colorMap[i]))
             rootNode.addChildNode(self.carNodes[i])
-            self.carNodes[i].position = self.startPos[i].p
-            self.carNodes[i].look(at: self.startPos[i].l, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
+            self.carNodes[i].position = self.startPosList[i].startPos
+            self.carNodes[i].look(at: self.startPosList[i].lookAt, up: SCNVector3(0,1,0), localFront: SCNVector3(0,0,1))
         }
         
         self.cameraNode.camera = SCNCamera()

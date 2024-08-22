@@ -40,7 +40,7 @@ struct LapSimulationView: View {
     private let xModifier: Float = 0.5 // Scales gesture distance to change in coords of viewModel.cameraPos
     
     var sceneView: some View {
-        let scene = SimulScene(carSeq: viewModel.carSeq, cameraPos: viewModel.cameraPos, trackNode: viewModel.trackNode, startPos: viewModel.startPos)
+        let scene = SimulScene(actionSequences: viewModel.actionSequences, cameraPos: viewModel.cameraPos, trackNode: viewModel.trackNode, startPosList: viewModel.startPosList)
         return SimulSceneView(scene: scene)
             .gesture(orbitGesture)
     }

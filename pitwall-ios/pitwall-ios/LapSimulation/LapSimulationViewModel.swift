@@ -35,12 +35,12 @@ class LapSimulationViewModel {
     
     // Non-private attributes will be referred to by LapComparisonView when instantiating SimulScene
     var cameraPos = CameraPosition()
-    var carSeq = [SCNAction]()
+    var actionSequences = [SCNAction]()
     var trackNode = SCNNode()
-    var startPos = [(p: SCNVector3, l: SCNVector3)]()
+    var startPosList = [(startPos: SCNVector3, lookAt: SCNVector3)]() // Passed to SimulScene to set start pos of cars and initial lookAt direction
     var driverList = [String]()
-    private var lapData = [Lap]() // Raw laps sorted by lap time
-    private var carPos = [CarPositions]() // Position data sorted by lap time
+    private var allLapData = [Lap]() // Raw laps sorted by lap time
+    private var allCarPos = [CarPositions]() // Position data sorted by lap time
     
     private var processor: DataProcessor
     
@@ -53,11 +53,11 @@ class LapSimulationViewModel {
             let lap = processor.driverDatabase[drivers[i]]?.laps[String(laps[i])]
             if let lap {
                 if !lap.PositionData.isEmpty {
-                    lapData.insertSorted(newItem: lap)
-                    carPos.append(CarPositions())
-                    // Legend in LapSimulationView includes driver sName and Lap Number, stored in driverList
+                    allLapData.insertSorted(newItem: lap)
+                    allCarPos.append(CarPositions())
+                    // Legend in LapSimulationView includes driver sName and Lap Number stored in driverList. Sorted by lapTime
                     let drvInfo = (processor.driverInfo.lookup[drivers[i]]?.sName ?? "") + " L" + String(laps[i])
-                    driverList.insert(drvInfo, at: lapData.firstIndex(of: lap) ?? 0)
+                    driverList.insert(drvInfo, at: allLapData.firstIndex(of: lap) ?? 0)
                 } else {
                     return // TODO: Throw error
                 }
@@ -66,30 +66,31 @@ class LapSimulationViewModel {
             }
         }
         
-        for i in 0...(lapData.count - 1) {
-            getRawPositions(lap: lapData[i], carPos: carPos[i])
-            resampleToFrequency(carPos: carPos[i], frequency: 10)
-            savitskyGolayFilter(carPos: carPos[i])
-            if i != 0 {
-                syncStartPoint(target: carPos[i])
-                setEndPoint(lap: lapData[i], carPos: carPos[i])
-            }
-            carSeq.append(generateActionSequence(carPos: carPos[i]))
-            startPos.append((p: carPos[i].positions[0].coords, l: carPos[i].positions[1].coords))
+        for i in 0...(allLapData.count - 1) {
+            getRawPositions(lap: allLapData[i], target: allCarPos[i])
+            resampleToFrequency(target: allCarPos[i], frequency: 10)
+            savitskyGolayFilter(target: allCarPos[i])
+            // TODO: Evaluate need to sync start/end positions
+//            if i != 0 {
+//                syncStartPoint(target: allCarPos[i])
+//                syncEndPoint(target: allCarPos[i])
+//            }
+            actionSequences.append(generateActionSequence(target: allCarPos[i]))
+            startPosList.append((startPos: allCarPos[i].positions[0].coords, lookAt: allCarPos[i].positions[1].coords))
         }
         
-        trackNode = SCNPathNode(path: carPos[0].positions.map { $0.coords }, width: 12, curvePoints: 32)
-        carPos = [] // These objects are no longer needed. Deallocating memory
-        lapData = []
+        trackNode = SCNPathNode(path: allCarPos[0].positions.map { $0.coords }, width: 12, curvePoints: 32)
+        allCarPos = [] // These objects are no longer needed. Deallocating memory
+        allLapData = []
     }
     
-    private func getRawPositions(lap: Lap, carPos: CarPositions) {
+    private func getRawPositions(lap: Lap, target: CarPositions) {
         /*
          The first position data may not represent the coords of the car the moment it crossed the start finish line due to the low sample rate
          At t = 0, the car should be exactly on the SL line. (First timestamp - Lap start timestamp) is used to offset all timestamps such that
          they are now relative to t = 0 when the car crossed the SL line.
          We interpolate the coords at which the car crossed the start finish line by drawing a line between the first two coords of the car and
-         finding the coords when t = 0
+         finding the coords when t = 0. The end point is interpolated in a similar fashion using the total lap time
          */
         
         let posData = lap.PositionData
@@ -102,32 +103,34 @@ class LapSimulationViewModel {
                 let y = (Float(coords[3]) ?? 0) / 10 // y and z coords are swapped between F1 live data and SceneKit
                 let z = (Float(coords[2]) ?? 0) / 10
                 
-                carPos.positions.append(
+                target.positions.append(
                     SinglePosition(coords: SCNVector3(x: x, y: y, z: z), timestamp: posData[i].timestamp - posData[0].timestamp + delta)
                 )
             }
         }
         
-        let startPoint = linearInterpolatePos(prev: carPos.positions[0], next: carPos.positions[1], t: 0)
-        carPos.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+        // Start point is being interpolated from timestamp of lap start
+        let startPoint = linearInterpolatePos(prev: target.positions[0], next: target.positions[1], t: 0)
+        target.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
+        
+        // End point is being interpolated from lap time
+        let lapTime = convertLapTimeToSeconds(time: lap.LapTime.value)
+        let endPoint = linearInterpolatePos(prev: target.positions[target.positions.count - 2], next: target.positions[target.positions.count - 1], t: lapTime)
+        target.positions.append(SinglePosition(coords: endPoint, timestamp: Double(lapTime)))
     }
-    
+     
     private func syncStartPoint(target: CarPositions) {
         /*
-         Lap start time is calculated using the timestamp the car left the pits / timestamp of sector 3 time of previous lap
-         Due to delays in the sensors detecting the above, lap start time is not always consistent between laps/cars
-         As cars are usually travelling >300km/h at the SL line, these small inconsistencies can cause the start points of two
-         cars to be visibly different. Hence, there is a need to sync the start points
+         Lap start time is calculated using the timestamp the car left the pits / timestamp of sector 3 time update of previous lap. Due to delays in the sensors detecting the above, lap start time is not always consistent between laps/cars. As cars are usually travelling >300km/h at the SL line, these small inconsistencies can cause the start points of two cars to be visibly different. Hence, there is a need to sync the start points
          
-         The chase cars start point is synced to the lead cars. The closest point to the lead cars start point in the path of the chase
-         car is set as it's start point.
+         The chase cars start point is synced to the lead cars. The closest point to the lead cars start point in the path of the chase car is set as it's start point.
          */
         
         func distance(p1: SCNVector3, p2: SCNVector3) -> Float { // Returns distance between points
             return sqrtf(powf(p1.x - p2.x, 2) + powf(p1.z - p2.z, 2))
         }
         
-        let refPoint = carPos[0].positions[0].coords // Lead cars start point is used as the reference
+        let refPoint = allCarPos[0].positions[0].coords // Lead cars start point is used as the reference
         // Point 1 and 2 are the closest two points to the lead cars start point
         var prev = distance(p1: target.positions[0].coords, p2: refPoint)
         var count = 1
@@ -216,38 +219,32 @@ class LapSimulationViewModel {
         target.positions.insert(SinglePosition(coords: startPoint, timestamp: 0), at: 0)
     }
     
-    private func setEndPoint(lap: Lap, carPos: CarPositions) {
+    private func syncEndPoint(target: CarPositions) {
         /*
-         Due to possible delays in data, position data for the next lap may accidentally end up in this lap. We remove any position data that has timestamp that meets the following condition (timestamp - startTime) > lapTime. We also interpolate the end position.
+         This function is used to sync a slower cars lap time to match the fastest lap time. All position data after fastest lap time has elapsed is removed. The position of the car at the point where fastest lap time has elapsed is also interpolated as the last position of the car
          */
-//        let lapTime = Double(convertLapTimeToSeconds(time: lapData[0].LapTime.value)) // All cars stop when leader reaches finish
-        // TODO: Check discrepancy in ending position when turning off smoothing filter
-        let lapTime = Double(convertLapTimeToSeconds(time: lap.LapTime.value))
-        var count = carPos.positions.count - 1
-        var delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+        let lapTime = Double(convertLapTimeToSeconds(time: allLapData[0].LapTime.value))
+        var count = target.positions.count - 1
+        var delta = target.positions[count].timestamp - target.positions[0].timestamp
         
         while delta > lapTime {
             count -= 1
-            delta = carPos.positions[count].timestamp - carPos.positions[0].timestamp
+            delta = target.positions[count].timestamp - target.positions[0].timestamp
         }
         
-        carPos.positions.removeLast(carPos.positions.count - count - 1) // Removing extra positions
+        target.positions.removeLast(target.positions.count - count - 1) // Removing extra positions
         
-        let endPoint = linearInterpolatePos(prev: carPos.positions[carPos.positions.count - 2], next: carPos.positions[carPos.positions.count - 1], t: Float(lapTime))
-        carPos.positions.append(SinglePosition(coords: endPoint, timestamp: lapTime))
+        let endPoint = linearInterpolatePos(prev: target.positions[target.positions.count - 2], next: target.positions[target.positions.count - 1], t: Float(lapTime))
+        target.positions.append(SinglePosition(coords: endPoint, timestamp: lapTime))
     }
-        
-    // TODO: Evaluate difference between resampleToReference and resampleToFrequency
+    
     private func resampleToReference(reference: CarPositions, target: CarPositions) {
         /*
          All timestamps in reference will be added to target, if not already present.
          
-         Resampling ensures that both cars will have the same number of position data points. There is no loss of accuracy
-         when resampling as linear interpolation is done between non-interpolated data to calculate missing data points. This would have
-         been done anyway since the SCNAction.move(duration:) is a linear animation. Loss of accuracy comes during the smoothing of data.
+         Resampling ensures that both cars will have the same number of position data points. There is no loss of accuracy when resampling as linear interpolation is done between non-interpolated data to calculate missing data points. This would have been done anyway since the SCNAction.move(duration:) is a linear animation. Loss of accuracy comes during the smoothing of data.
          
-         The resampled data ensures that both cars will have SCNAction.move() being called in parallel and for the same number of
-         times, preventing processing delays from adding up and diverging the gap between the cars.
+         The resampled data ensures that both cars will have SCNAction.move() being called in parallel and for the same number of times, preventing processing delays from adding up and diverging the gap between the cars.
         */
         
         for refItem in reference.positions {
@@ -263,47 +260,47 @@ class LapSimulationViewModel {
                 target.positions[index].interpolated = true
             }
         }
-        fillMissing(carPos: target)
+        fillMissing(target: target)
     }
     
-    private func resampleToFrequency(carPos: CarPositions, frequency: Double) {
+    private func resampleToFrequency(target: CarPositions, frequency: Double) {
         /*
          Resamples data to the specified frequency (Hz). First and last data points are kept intact. Refer to
          resampleToReference() for explanation on why resampling is necessary
         */
         
-        let lastTimestamp = carPos.positions.last?.timestamp ?? 0
+        let lastTimestamp = target.positions.last?.timestamp ?? 0
         let delta = 1 / frequency
         var curTime = delta
         
         while curTime < lastTimestamp {
             let item = SinglePosition(coords: SCNVector3(), timestamp: curTime, interpolated: true)
-            let index = carPos.positions.insertionIndexOf(elem: item) {$0 < $1}
-            carPos.positions.insert(item, at: index)
+            let index = target.positions.insertionIndexOf(elem: item) {$0 < $1}
+            target.positions.insert(item, at: index)
             curTime += delta
         }
         
-        fillMissing(carPos: carPos)
+        fillMissing(target: target)
         
         // Preserve first and last data points. All other non-interpolated data is removed
-        for i in stride(from: carPos.positions.count - 2, to: 0, by: -1) {
-            if carPos.positions[i].interpolated == false {
-                carPos.positions.remove(at: i)
+        for i in stride(from: target.positions.count - 2, to: 0, by: -1) {
+            if target.positions[i].interpolated == false {
+                target.positions.remove(at: i)
             }
         }
     }
     
-    private func fillMissing(carPos: CarPositions) {
+    private func fillMissing(target: CarPositions) {
         /*
          Any data point that is marked with interpolated == true will have it's coordinate calculated via linear interpolation between
          the previous coordinate and the next non-interpolated coordinate.
         */
-        for i in 0...(carPos.positions.count - 1) {
-            if carPos.positions[i].interpolated == true {
+        for i in 0...(target.positions.count - 1) {
+            if target.positions[i].interpolated == true {
                 var j = i
-                while j < carPos.positions.count { // Finding next non-interpolated data point
-                    if carPos.positions[j].interpolated == false {
-                        carPos.positions[i].coords = linearInterpolatePos(prev: carPos.positions[i-1], next: carPos.positions[j], t: Float(carPos.positions[i].timestamp))
+                while j < target.positions.count { // Finding next non-interpolated data point
+                    if target.positions[j].interpolated == false {
+                        target.positions[i].coords = linearInterpolatePos(prev: target.positions[i-1], next: target.positions[j], t: Float(target.positions[i].timestamp))
                         break
                     } else {
                         j += 1
@@ -343,15 +340,15 @@ class LapSimulationViewModel {
         return SCNVector3(x: x, y: y, z: z)
     }
     
-    private func smoothConvolve(carPos: CarPositions) {
+    private func smoothConvolve(target: CarPositions) {
         var xSmooth: [Float] = []
         var ySmooth: [Float] = []
         var zSmooth: [Float] = []
 
-        for i in 0...(carPos.positions.count - 1) {
-            xSmooth.append(carPos.positions[i].coords.x)
-            ySmooth.append(carPos.positions[i].coords.y)
-            zSmooth.append(carPos.positions[i].coords.z)
+        for i in 0...(target.positions.count - 1) {
+            xSmooth.append(target.positions[i].coords.x)
+            ySmooth.append(target.positions[i].coords.y)
+            zSmooth.append(target.positions[i].coords.z)
         }
         
         // Padding to ensure output is same size as input
@@ -367,13 +364,13 @@ class LapSimulationViewModel {
         zSmooth = vDSP.convolve(zSmooth, withKernel: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
         
         for i in 0...(xSmooth.count - 1) {
-            carPos.positions[i].coords.x = xSmooth[i]
-            carPos.positions[i].coords.y = ySmooth[i]
-            carPos.positions[i].coords.z = zSmooth[i]
+            target.positions[i].coords.x = xSmooth[i]
+            target.positions[i].coords.y = ySmooth[i]
+            target.positions[i].coords.z = zSmooth[i]
         }
     }
     
-    private func savitskyGolayFilter(carPos: CarPositions) {
+    private func savitskyGolayFilter(target: CarPositions) {
         /*
          A Savitsky-Golay filter is applied to the resampled position data to smooth out noise in the data. The filter
          is applied within a window length of 20 (~1s before & after current point is used to calculate interpolated point) and a
@@ -390,10 +387,10 @@ class LapSimulationViewModel {
         var ySmooth: [Float] = []
         var zSmooth: [Float] = []
 
-        for i in 0...(carPos.positions.count - 1) {
-            xSmooth.append(carPos.positions[i].coords.x)
-            ySmooth.append(carPos.positions[i].coords.y)
-            zSmooth.append(carPos.positions[i].coords.z)
+        for i in 0...(target.positions.count - 1) {
+            xSmooth.append(target.positions[i].coords.x)
+            ySmooth.append(target.positions[i].coords.y)
+            zSmooth.append(target.positions[i].coords.z)
         }
 
         // Wrap style padding to ensure output is same size as input
@@ -409,23 +406,23 @@ class LapSimulationViewModel {
         zSmooth = vDSP.convolve(zSmooth, withKernel: kernel)
         
         for i in 0...(xSmooth.count - 1) {
-            carPos.positions[i].coords.x = xSmooth[i]
-            carPos.positions[i].coords.y = ySmooth[i]
-            carPos.positions[i].coords.z = zSmooth[i]
+            target.positions[i].coords.x = xSmooth[i]
+            target.positions[i].coords.y = ySmooth[i]
+            target.positions[i].coords.z = zSmooth[i]
         }
     }
     
-    private func generateActionSequence(carPos: CarPositions) -> SCNAction {
+    private func generateActionSequence(target: CarPositions) -> SCNAction {
         var seq: [SCNAction] = []
-        for i in 1...(carPos.positions.count - 1) {
+        for i in 1...(target.positions.count - 1) {
             /*
              These placeholder vars are needed to avoid the lookWithDurationAction block from using reference-type values of x,y,z from
-             the carPos instance at the time the action is called, instead of the values when the block is instantiated.
+             the target instance at the time the action is called, instead of the values when the block is instantiated.
             */
-            let x = carPos.positions[i].coords.x
-            let y = carPos.positions[i].coords.y
-            let z = carPos.positions[i].coords.z
-            let dur = carPos.positions[i].timestamp - carPos.positions[i-1].timestamp // No. of seconds taken for animation
+            let x = target.positions[i].coords.x
+            let y = target.positions[i].coords.y
+            let z = target.positions[i].coords.z
+            let dur = target.positions[i].timestamp - target.positions[i-1].timestamp // No. of seconds taken for animation
             
             /*
              Every action in the sequence is a grouped action comprising of the move to the current coordinate and the rotation of the car
