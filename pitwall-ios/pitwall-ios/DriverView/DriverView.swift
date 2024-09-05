@@ -11,6 +11,8 @@ struct DriverView: View {
     
     @EnvironmentObject private var processor: DataProcessor
     @State private var selectedDriver: String = "1"
+    @State private var gapViewModel: GapOrIntervalViewModel?
+    @State private var intViewModel: GapOrIntervalViewModel?
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -32,10 +34,15 @@ struct DriverView: View {
             .padding()
             .onAppear {
                 selectedDriver = processor.driverList.first ?? "1"
+                gapViewModel = GapOrIntervalViewModel(processor: processor, driver: selectedDriver, type: "GAP")
+                intViewModel = GapOrIntervalViewModel(processor: processor, driver: selectedDriver, type: "INT")
+                Task.detached(priority: .low) {
+                    await getGapOrIntervals()
+                }
             }
         
-            let driverObject = processor.driverDatabase[selectedDriver]
-            if driverObject != nil {
+            if let gapViewModel, let intViewModel {
+                
                 CarDataView(driver: selectedDriver)
                     .padding()
              
@@ -50,14 +57,14 @@ struct DriverView: View {
                     .fontWeight(.heavy)
                     .padding()
                 
-                GapOrIntervalView(driver: selectedDriver, type: "GAP")
+                GapOrIntervalView(viewModel: gapViewModel)
                 
                 Text("Interval to position ahead")
                     .font(.body)
                     .fontWeight(.heavy)
                     .padding()
                 
-                GapOrIntervalView(driver: selectedDriver, type: "INT")
+                GapOrIntervalView(viewModel: intViewModel)
             }
         }
         .background {
@@ -66,5 +73,19 @@ struct DriverView: View {
                 .shadow(radius: 10)
         }
         .padding()
+        .onChange(of: selectedDriver) { _ in
+            Task.detached(priority: .low) {
+                await getGapOrIntervals()
+            }
+        }
+    }
+    
+    private func getGapOrIntervals() {
+        if let gapViewModel, let intViewModel {
+            gapViewModel.driver = selectedDriver
+            intViewModel.driver = selectedDriver
+            gapViewModel.getGapOrInterval()
+            intViewModel.getGapOrInterval()
+        }
     }
 }

@@ -9,6 +9,8 @@ import Foundation
 
 class TrackDominanceViewModel {
     
+    // TODO: Set limit of 5 cars and series identifiers using sorted lap time
+    
     private struct SpeedPosData: Comparable {
         // SpeedPosData is used as a temporary container that stores both position data and speed data extracted from CarData
         struct SinglePosition: Comparable {

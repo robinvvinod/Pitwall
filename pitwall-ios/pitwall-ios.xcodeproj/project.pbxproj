@@ -29,6 +29,7 @@
 		003AE4272A179D4200B8EA6C /* CarDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4262A179D4200B8EA6C /* CarDataView.swift */; };
 		003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */; };
 		00406E1B2A1621AC0057C757 /* TelemetryHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00406E1A2A1621AC0057C757 /* TelemetryHelpers.swift */; };
+		0042E8F62C8A556E009A2ED0 /* GapOrIntervalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042E8F52C8A556E009A2ED0 /* GapOrIntervalViewModel.swift */; };
 		0047DCD42A1B360700E0C259 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047DCD32A1B360700E0C259 /* Extensions.swift */; };
 		004B58512A7CEC2600A0ECEE /* SpeedTraceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004B58502A7CEC2600A0ECEE /* SpeedTraceViewModel.swift */; };
 		004B58542A7CECA900A0ECEE /* TrackDominanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004B58532A7CECA900A0ECEE /* TrackDominanceViewModel.swift */; };
@@ -89,6 +90,7 @@
 		003AE4262A179D4200B8EA6C /* CarDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarDataView.swift; sourceTree = "<group>"; };
 		003AE4282A179D7100B8EA6C /* SpeedTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTraceView.swift; sourceTree = "<group>"; };
 		00406E1A2A1621AC0057C757 /* TelemetryHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryHelpers.swift; sourceTree = "<group>"; };
+		0042E8F52C8A556E009A2ED0 /* GapOrIntervalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GapOrIntervalViewModel.swift; sourceTree = "<group>"; };
 		0047DCD32A1B360700E0C259 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		004B58502A7CEC2600A0ECEE /* SpeedTraceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTraceViewModel.swift; sourceTree = "<group>"; };
 		004B58532A7CECA900A0ECEE /* TrackDominanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackDominanceViewModel.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 				003AE4262A179D4200B8EA6C /* CarDataView.swift */,
 				00DDE4F82A2223520022585E /* LapHistoryView.swift */,
 				005998F02A1DB56200A20410 /* GapOrIntervalView.swift */,
+				0042E8F52C8A556E009A2ED0 /* GapOrIntervalViewModel.swift */,
 				002607052C635500008C1E7B /* DriverView.swift */,
 			);
 			path = DriverView;
@@ -427,6 +430,7 @@
 				00ED01772C5B9651002CE177 /* HeadToHeadViewModel.swift in Sources */,
 				0022E7912A03EF170030BB29 /* DataProcessor.swift in Sources */,
 				00DDE4F92A2223520022585E /* LapHistoryView.swift in Sources */,
+				0042E8F62C8A556E009A2ED0 /* GapOrIntervalViewModel.swift in Sources */,
 				0019CB5F2A4587B500B8460A /* SCNVector3+Extensions.swift in Sources */,
 				003AE4252A179C8F00B8EA6C /* LeaderboardView.swift in Sources */,
 				003AE4292A179D7100B8EA6C /* SpeedTraceView.swift in Sources */,
