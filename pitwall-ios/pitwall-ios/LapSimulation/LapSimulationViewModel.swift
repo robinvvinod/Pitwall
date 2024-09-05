@@ -68,13 +68,13 @@ class LapSimulationViewModel {
         
         for i in 0...(allLapData.count - 1) {
             getRawPositions(lap: allLapData[i], target: allCarPos[i])
-            resampleToFrequency(target: allCarPos[i], frequency: 10)
-            savitskyGolayFilter(target: allCarPos[i])
             // TODO: Evaluate need to sync start/end positions
 //            if i != 0 {
 //                syncStartPoint(target: allCarPos[i])
 //                syncEndPoint(target: allCarPos[i])
 //            }
+            resampleToFrequency(target: allCarPos[i], frequency: 10)
+            savitskyGolayFilter(target: allCarPos[i])
             actionSequences.append(generateActionSequence(target: allCarPos[i]))
             startPosList.append((startPos: allCarPos[i].positions[0].coords, lookAt: allCarPos[i].positions[1].coords))
         }
@@ -283,6 +283,7 @@ class LapSimulationViewModel {
         fillMissing(target: target)
         
         // Preserve first and last data points. All other non-interpolated data is removed
+        // This does not cause any loss in accuracy as resampled frequency is higher than source frequency
         for i in stride(from: target.positions.count - 2, to: 0, by: -1) {
             if target.positions[i].interpolated == false {
                 target.positions.remove(at: i)

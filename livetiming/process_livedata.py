@@ -23,7 +23,7 @@ class ProcessLiveData:
         self,
         startingPositions: list[int],
         redis_url="localhost",
-        kafka_url="192.168.1.104:9092",
+        kafka_url="localhost:9092",
     ):
         self._redis = redis.Redis(host=redis_url, decode_responses=True)
         self._kafka = aiokafka.AIOKafkaProducer(

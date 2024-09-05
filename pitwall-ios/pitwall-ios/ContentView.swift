@@ -10,8 +10,8 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     
-    private let kafkaURL = "http://192.168.1.79:8082"
-    private let kafkaClusterID = "tCW3cjgsTqKnNnJuNQkRWA"
+    private let kafkaURL = "http://100.72.199.158:8082"
+    private let kafkaClusterID = "aGijjh5XS4azzUXEj1PyHg"
     private let topics = ["LapTime","CurrentLap","GapToLeader","IntervalToPositionAhead","SectorTime","Speed","InPit","NumberOfPitStops","PitOut","CarData","PositionData","Position","Retired","TotalLaps","Fastest","LapCount","SessionStatus","RCM","DeletedLaps", "TyreAge", "Tyre"]
     
     @StateObject private var processor = DataProcessor(sessionType: "RACE", driverList: ["16", "1", "11", "55", "44", "14", "4", "22", "18", "81", "63", "23", "77", "2", "24", "20", "10", "21", "31", "27"]) // TODO: find a way to pass in starting order of session

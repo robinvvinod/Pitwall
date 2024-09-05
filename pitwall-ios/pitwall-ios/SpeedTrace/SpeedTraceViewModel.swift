@@ -70,8 +70,7 @@ class SpeedTraceViewModel: ObservableObject {
          Returns interpolated speed data for any given distance. Used to determine speed when panning through chart since
          not all distances may have a corresponding speed data point.
          
-         Finds the index of the closest existing distance using a linear search, then does a linear interpolation using the prev/next
-         value to calculate speed at any given distance.
+         Finds the index of the closest existing distance using a binary search, then does a linear interpolation using the prev/next value to calculate speed at any given distance.
         */
         let index = speedData.distances.binarySearch(elem: distance)
         if speedData.distances[index] == distance { // No interpolation needed, exact data point is available

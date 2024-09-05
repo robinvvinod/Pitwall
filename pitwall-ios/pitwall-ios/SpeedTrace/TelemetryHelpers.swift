@@ -30,7 +30,7 @@ private func integrate(pt1: [Double], pt2: [Double]) -> Double {
 }
 
 func addDistance(CarData: [(value: String, timestamp: Double)]) -> [(speed: Int, distance: Double)] {
-    // Converts (speed, timestamp) to (speed, distance)
+    // Converts (speed, timestamp) to (speed, distance), assuming change in speed is linear between consecutive points
     var returnArr = [(speed: Int, distance: Double)]()
     
     for (i, item) in CarData.enumerated() {

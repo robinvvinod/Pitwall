@@ -95,17 +95,11 @@ class TrackDominanceViewModel {
     
     private func extractFastestSections(resolution: Float) {
         /*
-         The posData for the car with the fastest lap time is used as the reference for which the track is drawn. The function iterates
-         through each position of the lead car, and finds the speed of all other cars at a position that is closest to reference position.
+         The posData for the car with the fastest lap time is used as the reference for which the track is drawn. The function iterates through each position of the lead car, and finds the speed of all other cars at a position that is closest to reference position.
          
-         The closest position is found by first conducting a binary search of the timestamp at which the reference position was set. Since all
-         lap times are within the same order of magnitude, this gives a good start point for the search. We then search both directions in time
-         till we find the exact closest position. The timestamp of this position is used to interpolate the speed of the car.
+         The closest position is found by first conducting a binary search of the timestamp at which the reference position was set. Since all lap times are within the same order of magnitude, this gives a good start point for the search. We then search both directions in time till we find the exact closest position. The timestamp of this position is used to interpolate the speed of the car.
          
-         The resolution parameter controls the length of the track on which the speed of the cars is averaged. The track is split into
-         sections that are roughly equal to the resolution. Each section has it's own series, to ensure that they are treated as line segments
-         in Swift Charts, each with their own color to denote which car was fastest. The last point in series 1 is also the first point in
-         series 2. This ensures that all the line segments are joined to form a continous track.
+         The resolution parameter controls the length of the track on which the speed of the cars is averaged. The track is split into sections that are roughly equal to the resolution. Each section has it's own series, to ensure that they are treated as line segments in Swift Charts, each with their own color to denote which car was fastest. The last point in series 1 is also the first point in eries 2. This ensures that all the line segments are joined to form a continous track.
         */
         func distance(p1: SpeedPosData.SinglePosition, p2: SpeedPosData.SinglePosition) -> Float { // Returns distance between p1 & p2
             return sqrtf(powf((p1.x - p2.x), 2) - powf((p1.y - p2.y), 2))
@@ -115,15 +109,13 @@ class TrackDominanceViewModel {
         var start = 0
         while start <= (rawData[0].pos.count - 1)  {
             /*
-             The speeds array contains the cumulative speed for a car over a section of the track. The index of a car's speed in the array
-             is the same as the index of the car's data in the rawData array.
+             The speeds array contains the cumulative speed for a car over a section of the track. The index of a car's speed in the array is the same as the index of the car's data in the rawData array.
             */
             var speeds = [Int](repeating: 0, count: rawData.count)
             var end = start
             
             /*
-             start to end is the index range which represents a section of track that is ~= resolution. For every point in this range,
-             the speeds of all cars is found using findClosestTime() and interpolateSpeed(). The
+             start to end is the index range which represents a section of track that is ~= resolution. For every point in this range, the speeds of all cars is found using findClosestTime() and interpolateSpeed(). The
             */
             for i in start...(rawData[0].pos.count - 1) {
                 maxX = rawData[0].pos[i].x > maxX ? rawData[0].pos[i].x : maxX // Find minX/Y and maxX/Y values
@@ -147,9 +139,7 @@ class TrackDominanceViewModel {
             }
             
             /*
-             For a given section of the track, the car with the highest cumulative speed had the highest average speed. Since the index of
-             a car in the speeds array is the same as the index in the rawData array, the index of the max() element in the speeds array will
-             point us to the racing number of the car that had the highest average speed
+             For a given section of the track, the car with the highest cumulative speed had the highest average speed. Since the index of a car in the speeds array is the same as the index in the rawData array, the index of the max() element in the speeds array will point us to the racing number of the car that had the highest average speed
             */
             let maxS = speeds.max() ?? 0
             let rNum = rawData[((speeds.firstIndex(of: maxS) ?? 0) % rawData.count)].rNum
