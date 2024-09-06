@@ -9,4 +9,21 @@ A real-time Formula 1 telemetry analysis tool that lets you generate and compare
 
 ## Project Status
 
-This project is currently in development. Users can filter tweets by username and keyword and see visual data representation. Functionality to sort by additional parameters is in progress.
+This project is currently in development.
+
+#### Backend
+- [x] Connecting to official SignalR broadcast
+- [x] Cleaning and processing official data
+- [x] Caching of cleaned data in Redis
+- [x] Streaming cleaned data to Kafka broker
+- [ ] Labelling and splitting Kafka topics by session location and type
+
+#### Frontend
+- [x] Customisable live leaderboard view
+- [x] Speed trace comparison chart
+- [x] Track dominance
+- [x] Lap simulations
+- [x] Live car data (Speed, gear, throttle %, brake %, DRS)
+- [ ] Pit window
+- [ ] Tyre choice graphs
+- [ ] Overall UI/UX design (WIP)
